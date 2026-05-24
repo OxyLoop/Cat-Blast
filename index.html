@@ -12,18 +12,20 @@
       font-family: Arial, sans-serif;
       background: linear-gradient(135deg, #f6efe7, #dce9f7);
       display: flex;
-      align-items: center;
+      align-items: flex-start;
       justify-content: center;
       color: #263238;
     }
     .game {
-      width: min(95vw, 620px);
-      min-height: 90vh;
+      width: min(95vw, 680px);
+      min-height: 100dvh;
       background: rgba(255,255,255,.82);
-      border-radius: 28px;
+      border-radius: 0;
       padding: 22px;
       box-shadow: 0 20px 55px rgba(0,0,0,.15);
       position: relative;
+      display: flex;
+      flex-direction: column;
     }
     .top {
       display: flex;
@@ -82,7 +84,9 @@
       position: relative;
       display: flex;
       justify-content: center;
-      margin: 16px 0;
+      align-items: center;
+      flex: 1;
+      margin: 8px 0;
     }
     #grid {
       display: grid;
@@ -91,6 +95,7 @@
       padding: 8px;
       border-radius: 18px;
       box-shadow: inset 0 3px 10px rgba(0,0,0,.12);
+      position: relative;
     }
     .gcell {
       border-radius: 9px;
@@ -286,7 +291,7 @@
     body.dark .debug-card { background: #1a2235; }
 
     @media (max-width: 520px) {
-      .game { border-radius: 0; min-height: 100vh; width: 100vw; padding: 14px; }
+      .game { width: 100vw; padding: 14px; }
       #level-cards { grid-template-columns: repeat(3, 1fr); }
       .piece-card { width: 31vw; height: 92px; }
     }

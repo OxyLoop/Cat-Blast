@@ -26,9 +26,9 @@ const COLORS=[
 ];
 
 // ── CAT SPRITE CONFIG ─────────────────────────────────────────────
-const CAT_SHEET   = '2x2Cat64.png'; // sprite sheet filename (same folder)
-const CAT_FRAMES  = 1;              // single static frame for now (animation later)
-const CAT_FPR     = 1;              // frames per row
+const CAT_SHEET   = '2x2Cat64-sheet.png'; // sprite sheet filename (same folder)
+const CAT_FRAMES  = 6;                    // 6-frame idle loop
+const CAT_FPR     = 6;                    // all frames in one row
 const CAT_FPS     = 10;            // animation playback speed
 const CAT_IDLE_MS = 8000;          // ms between animations
 
@@ -70,7 +70,7 @@ function getLv(n) { return LEVELS[Math.min(n, LEVELS.length) - 1]; }
 function randShape() { return SHAPES[Math.floor(Math.random() * SHAPES.length)]; }
 function randColor() { return COLORS[Math.floor(Math.random() * COLORS.length)]; }
 function newPiece() { return { shape: randShape(), color: randColor() }; }
-const cs = () => COLS <= 8 ? 38 : 34;
+const cs = () => COLS <= 8 ? 58 : 50;
 
 // ── AUDIO ─────────────────────────────────────────────────────────
 function getACtx() {
@@ -228,10 +228,12 @@ function applyGroupHover(idx, on) {
   if (!gSet) return;
   const ac = allCells();
   gSet.forEach(i => ac[i]?.classList.toggle('group-hover', on));
-  // Scale any cat sprite that belongs to this group
+  // Scale and animate any cat sprite that belongs to this group
   catSprites.forEach(s => {
-    if (gSet.has(s.r * COLS + s.c))
+    if (gSet.has(s.r * COLS + s.c)) {
       s.el.style.transform = on ? 'scale(1.04)' : '';
+      if (on) playCatAnim(s);
+    }
   });
 }
 
@@ -255,15 +257,34 @@ function renderGrid() {
   });
 }
 
+// ── ANCHOR HELPERS ────────────────────────────────────────────────
+// Returns row/col offset of the top-left filled cell in a shape.
+function firstFilledOffset(shape) {
+  for (let dr = 0; dr < shape.length; dr++)
+    for (let dc = 0; dc < shape[dr].length; dc++)
+      if (shape[dr][dc]) return { dr, dc };
+  return { dr: 0, dc: 0 };
+}
+
+// Given a clicked cell, return the bounding-box top-left so the first
+// filled cell aligns with the click. Clamped to stay inside the grid.
+function adjustedAnchor(shape, row, col) {
+  const { dr, dc } = firstFilledOffset(shape);
+  const r = Math.max(0, Math.min(ROWS - shape.length,    row - dr));
+  const c = Math.max(0, Math.min(COLS - shape[0].length, col - dc));
+  return { r, c };
+}
+
 // ── PREVIEW ───────────────────────────────────────────────────────
 function showPreview(row, col) {
   if (selectedPiece === null || paused) return;
   clearPreview();
   const p = pieces[selectedPiece];
-  const valid = canPlace(p.shape, row, col);
+  const { r, c } = adjustedAnchor(p.shape, row, col);
+  const valid = canPlace(p.shape, r, c);
   p.shape.forEach((rr, dy) => rr.forEach((v, dx) => {
     if (!v) return;
-    const nr = row + dy, nc = col + dx;
+    const nr = r + dy, nc = c + dx;
     if (nr < 0 || nr >= ROWS || nc < 0 || nc >= COLS) return;
     const cell = allCells()[nr * COLS + nc];
     if (board[nr][nc] || obstacles.has(nr * COLS + nc)) return;
@@ -363,14 +384,15 @@ function placeOnGrid(row, col) {
   if (selectedPiece === null) { setMsg('Önce bir blok seç!'); return; }
   if (usedFlags[selectedPiece]) return;
   const p = pieces[selectedPiece];
-  if (!canPlace(p.shape, row, col)) { setMsg('Buraya sığmıyor!'); return; }
+  const { r, c } = adjustedAnchor(p.shape, row, col);
+  if (!canPlace(p.shape, r, c)) { setMsg('Buraya sığmıyor!'); return; }
   playPlace();
 
   const placed = [];
   p.shape.forEach((rr, dy) => rr.forEach((v, dx) => {
     if (!v) return;
-    board[row + dy][col + dx] = p.color;
-    placed.push({ r: row + dy, c: col + dx });
+    board[r + dy][c + dx] = p.color;
+    placed.push({ r: r + dy, c: c + dx });
   }));
 
   // Register group so all cells hover together
@@ -396,7 +418,7 @@ function placeOnGrid(row, col) {
   });
 
   setTimeout(() => {
-    if (isCat) createCatSprite(row, col);
+    if (isCat) createCatSprite(r, c);
     const { cleared, toClear } = applyClears();
     if (toClear.size) removeCatSprites(toClear);
     const pts = placed.length * 10 + cleared * 60;
@@ -422,14 +444,16 @@ function placeOnGrid(row, col) {
 
 // ── UI HELPERS ────────────────────────────────────────────────────
 function showScoreFly(pts, row, col) {
-  const gw  = document.getElementById('grid-wrap');
+  const gridEl  = document.getElementById('grid');
+  const cells   = document.querySelectorAll('#grid div');
   const fly = document.createElement('div');
   fly.className = 'score-fly';
   fly.textContent = '+' + pts;
-  const s = cs();
-  fly.style.top  = (row * s + 16) + 'px';
-  fly.style.left = (col * s + 16) + 'px';
-  gw.appendChild(fly);
+  const cellRect = cells[row * COLS + col].getBoundingClientRect();
+  const gridRect = gridEl.getBoundingClientRect();
+  fly.style.top  = (cellRect.top  - gridRect.top  + 16) + 'px';
+  fly.style.left = (cellRect.left - gridRect.left + 16) + 'px';
+  gridEl.appendChild(fly);
   setTimeout(() => fly.remove(), 850);
 }
 
@@ -590,12 +614,12 @@ function createCatSprite(row, col) {
     // Body is square (frameW × frameW), ears = extra height above body.
     const earPx = Math.max(0, (frameH - frameW) * scale);
 
-    const wrapEl   = document.getElementById('grid-wrap');
+    const gridEl   = document.getElementById('grid');
     const cells    = document.querySelectorAll('#grid div');
     const cellRect = cells[row * COLS + col].getBoundingClientRect();
-    const wrapRect = wrapEl.getBoundingClientRect();
-    const cellX    = cellRect.left - wrapRect.left;
-    const cellY    = cellRect.top  - wrapRect.top;
+    const gridRect = gridEl.getBoundingClientRect();
+    const cellX    = cellRect.left - gridRect.left;
+    const cellY    = cellRect.top  - gridRect.top;
 
     const sheetRows = Math.ceil(CAT_FRAMES / fpr);
 
@@ -612,7 +636,7 @@ function createCatSprite(row, col) {
     // Scale from the center of the body (not center of div which includes ears)
     el.style.transformOrigin    = `${sFW * 0.5}px ${earPx + sFW * 0.5}px`;
     el.style.transition         = 'transform .12s';
-    wrapEl.appendChild(el);
+    gridEl.appendChild(el);
 
     catSprites.push({ r: row, c: col, el, fw: sFW, fh: sFH, going: false });
   });
