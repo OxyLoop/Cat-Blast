@@ -1,0 +1,442 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Cat Block Blast</title>
+  <style>
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      min-height: 100vh;
+      font-family: Arial, sans-serif;
+      background: linear-gradient(135deg, #f6efe7, #dce9f7);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: #263238;
+    }
+    .game {
+      width: min(95vw, 620px);
+      min-height: 90vh;
+      background: rgba(255,255,255,.82);
+      border-radius: 28px;
+      padding: 22px;
+      box-shadow: 0 20px 55px rgba(0,0,0,.15);
+      position: relative;
+    }
+    .top {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      margin-bottom: 14px;
+    }
+    h1 { margin: 0; font-size: 24px; }
+    .stats {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+      margin-bottom: 12px;
+    }
+    .card {
+      flex: 1;
+      min-width: 110px;
+      background: #fff;
+      border-radius: 18px;
+      padding: 10px 12px;
+      box-shadow: 0 8px 18px rgba(0,0,0,.08);
+      text-align: center;
+    }
+    .card b {
+      display: block;
+      font-size: 22px;
+      margin-top: 2px;
+    }
+    #score-card.bump { animation: bump .25s ease; }
+    @keyframes bump { 50% { transform: scale(1.06); } }
+
+    .progress {
+      margin: 12px 0 16px;
+      background: #eef2f5;
+      border-radius: 999px;
+      overflow: hidden;
+      height: 22px;
+      position: relative;
+    }
+    #progress-bar {
+      height: 100%;
+      width: 0%;
+      transition: width .25s ease;
+      border-radius: 999px;
+    }
+    .prog-labels {
+      display: flex;
+      justify-content: space-between;
+      font-size: 13px;
+      margin-bottom: 6px;
+      opacity: .8;
+    }
+
+    #grid-wrap {
+      position: relative;
+      display: flex;
+      justify-content: center;
+      margin: 16px 0;
+    }
+    #grid {
+      display: grid;
+      gap: 5px;
+      background: #d4dee8;
+      padding: 8px;
+      border-radius: 18px;
+      box-shadow: inset 0 3px 10px rgba(0,0,0,.12);
+    }
+    .gcell {
+      border-radius: 9px;
+      background: #f9fbfd;
+      border: 1px solid rgba(0,0,0,.08);
+      cursor: pointer;
+      transition: transform .12s, background .12s, opacity .12s;
+    }
+    .gcell:hover              { transform: scale(1.04); }
+    .gcell.filled:hover       { transform: none; }
+    .gcell.group-hover        { transform: scale(1.04); }
+    .gcell.filled.group-hover { transform: scale(1.04); }
+    .gcell.filled {
+      box-shadow: inset 0 -4px 0 rgba(0,0,0,.13);
+    }
+    .gcell.obstacle {
+      background: repeating-linear-gradient(45deg, #7c8793, #7c8793 6px, #66717d 6px, #66717d 12px);
+      cursor: not-allowed;
+    }
+    .preview {
+      opacity: .65;
+      outline: 2px solid rgba(255,255,255,.8);
+    }
+    .invalid {
+      background: #ff9b9b !important;
+      opacity: .7;
+    }
+    .placing { animation: placing .25s ease; }
+    @keyframes placing { from { transform: scale(.35); opacity: .4; } to { transform: scale(1); opacity: 1; } }
+    .clearing { animation: clear .34s ease forwards; }
+    @keyframes clear { to { transform: scale(.1) rotate(18deg); opacity: 0; } }
+
+    .pieces {
+      display: flex;
+      gap: 12px;
+      justify-content: center;
+      margin-top: 14px;
+    }
+    .piece-card {
+      width: 115px;
+      height: 105px;
+      background: white;
+      border-radius: 18px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      box-shadow: 0 8px 18px rgba(0,0,0,.08);
+      border: 3px solid transparent;
+      transition: transform .15s, border-color .15s, opacity .15s;
+    }
+    .piece-card:hover { transform: translateY(-3px); }
+    .piece-card.selected {
+      border-color: #5d8ed8;
+      transform: translateY(-4px) scale(1.03);
+    }
+    .piece-card.vanish {
+      opacity: 0;
+      transform: scale(.4);
+    }
+    .pmini {
+      display: grid;
+      align-items: center;
+      justify-content: center;
+    }
+    .pmini-cell {
+      width: 24px;
+      height: 24px;
+      border-radius: 6px;
+      box-shadow: inset 0 -3px 0 rgba(0,0,0,.12);
+    }
+    .pmini-cell.empty {
+      background: transparent;
+      box-shadow: none;
+      border-radius: 0;
+      pointer-events: none;
+    }
+    #msg {
+      text-align: center;
+      min-height: 20px;
+      margin-top: 12px;
+      transition: opacity .12s;
+      font-weight: 600;
+    }
+    button {
+      border: 0;
+      border-radius: 14px;
+      padding: 10px 15px;
+      cursor: pointer;
+      font-weight: 700;
+      background: #263238;
+      color: white;
+    }
+    button.secondary { background: #6b7a88; }
+    #sound-btn {
+      width: 44px;
+      height: 42px;
+      padding: 0;
+      font-size: 19px;
+    }
+
+    .overlay {
+      position: absolute;
+      inset: 0;
+      background: rgba(255,255,255,.94);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 10;
+      padding: 22px;
+      text-align: center;
+    }
+    .hidden { display: none !important; }
+    .modal {
+      background: #fff;
+      width: min(92vw, 430px);
+      border-radius: 28px;
+      padding: 26px;
+      box-shadow: 0 22px 60px rgba(0,0,0,.18);
+    }
+    .modal h2 { margin-top: 0; }
+    #level-cards {
+      display: grid;
+      grid-template-columns: repeat(5, 1fr);
+      gap: 8px;
+      margin: 16px 0;
+    }
+    .lc {
+      background: #f1f5f9;
+      border-radius: 14px;
+      padding: 9px 5px;
+      font-size: 12px;
+    }
+    .ln { font-weight: 800; margin-bottom: 4px; }
+    .score-fly {
+      position: absolute;
+      font-size: 22px;
+      font-weight: 900;
+      pointer-events: none;
+      animation: fly .85s ease forwards;
+      color: #263238;
+      text-shadow: 0 2px 0 white;
+    }
+    @keyframes fly { to { transform: translateY(-42px); opacity: 0; } }
+    #combo-toast {
+      position: absolute;
+      left: 50%;
+      top: 112px;
+      transform: translateX(-50%) scale(.7);
+      opacity: 0;
+      background: #263238;
+      color: white;
+      border-radius: 999px;
+      padding: 10px 18px;
+      font-weight: 900;
+      z-index: 8;
+      transition: .18s;
+    }
+    #combo-toast.show {
+      opacity: 1;
+      transform: translateX(-50%) scale(1);
+    }
+    .cat-sprite {
+      position: absolute;
+      pointer-events: none;
+      z-index: 2;
+      background-repeat: no-repeat;
+      image-rendering: pixelated;
+      image-rendering: crisp-edges;
+      overflow: visible;
+    }
+
+    #debug-panel {
+      border-top: 2px dashed rgba(0,0,0,.12);
+      padding-top: 10px;
+    }
+    .debug-card {
+      background: white;
+      border-radius: 12px;
+      padding: 8px;
+      cursor: pointer;
+      box-shadow: 0 4px 10px rgba(0,0,0,.08);
+      border: 2px solid transparent;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: transform .12s, border-color .12s;
+      min-width: 52px;
+      min-height: 52px;
+    }
+    .debug-card:hover { transform: translateY(-2px); border-color: #5d8ed8; }
+    body.dark #debug-panel { border-color: rgba(255,255,255,.12); }
+    body.dark .debug-card { background: #1a2235; }
+
+    @media (max-width: 520px) {
+      .game { border-radius: 0; min-height: 100vh; width: 100vw; padding: 14px; }
+      #level-cards { grid-template-columns: repeat(3, 1fr); }
+      .piece-card { width: 31vw; height: 92px; }
+    }
+
+    /* ── DARK MODE ── */
+    body.dark {
+      background: linear-gradient(135deg, #0f1320, #131b2e);
+      color: #d4e0ee;
+    }
+    body.dark .game {
+      background: rgba(22,28,44,.97);
+      box-shadow: 0 20px 55px rgba(0,0,0,.55);
+    }
+    body.dark .card {
+      background: #1e2840;
+      box-shadow: 0 8px 18px rgba(0,0,0,.35);
+      color: #d4e0ee;
+    }
+    body.dark #grid {
+      background: #0f1520;
+    }
+    body.dark .gcell {
+      background: #1a2235;
+      border-color: rgba(255,255,255,.06);
+    }
+    body.dark .gcell.obstacle {
+      background: repeating-linear-gradient(45deg, #3a4250, #3a4250 6px, #2e3540 6px, #2e3540 12px);
+    }
+    body.dark .overlay {
+      background: rgba(10,14,26,.95);
+    }
+    body.dark .modal {
+      background: #1a2235;
+      box-shadow: 0 22px 60px rgba(0,0,0,.6);
+      color: #d4e0ee;
+    }
+    body.dark .lc {
+      background: #1e2840;
+    }
+    body.dark .progress {
+      background: #1a2235;
+    }
+    body.dark button {
+      background: #3560b8;
+    }
+    body.dark button.secondary {
+      background: #3e4c60;
+    }
+    body.dark .piece-card {
+      background: #1a2235;
+      box-shadow: 0 8px 18px rgba(0,0,0,.35);
+    }
+    body.dark .score-fly {
+      color: #d4e0ee;
+      text-shadow: 0 2px 0 #000;
+    }
+    body.dark #combo-toast {
+      background: #3560b8;
+    }
+  </style>
+</head>
+<body onload="init()">
+  <main class="game">
+    <div class="top">
+      <h1>🐱 Cat Block Blast</h1>
+      <div>
+        <button id="sound-btn" onclick="toggleSound()">🔊</button>
+        <button id="dark-btn" onclick="toggleDark()">🌙</button>
+        <button id="debug-btn" class="secondary" onclick="toggleDebugPanel()" title="Test Paneli">🔧</button>
+        <button class="secondary" onclick="pauseGame()">Duraklat</button>
+      </div>
+    </div>
+
+    <div class="stats">
+      <div id="score-card" class="card">Skor <b id="sv">0</b></div>
+      <div class="card">En İyi <b id="bv">0</b></div>
+      <div class="card">Seviye <b id="lv-val">1</b></div>
+    </div>
+
+    <div class="prog-labels">
+      <span id="prog-left">Seviye 1</span>
+      <span id="prog-right">0 / 400</span>
+    </div>
+    <div class="progress"><div id="progress-bar"></div></div>
+
+    <div id="combo-toast"></div>
+    <div id="grid-wrap"><div id="grid"></div></div>
+
+    <section class="pieces">
+      <div id="p0" class="piece-card" onclick="selectPiece(0)"></div>
+      <div id="p1" class="piece-card" onclick="selectPiece(1)"></div>
+      <div id="p2" class="piece-card" onclick="selectPiece(2)"></div>
+    </section>
+
+    <div id="msg">Başlamak için oyunu başlat.</div>
+
+    <section id="debug-panel" class="hidden" style="margin-top:12px;">
+      <div style="font-size:11px;font-weight:700;text-align:center;opacity:.6;margin-bottom:6px;">TEST — Blok seç → Slot 0'a yerleşir, otomatik seçilir</div>
+      <div id="debug-shapes" style="display:flex;flex-wrap:wrap;gap:8px;justify-content:center;max-height:220px;overflow-y:auto;padding:4px;"></div>
+    </section>
+
+    <section id="start-overlay" class="overlay">
+      <div class="modal">
+        <h2>Cat Block Blast</h2>
+        <p>Blok seç, grid üzerine yerleştir, satır/sütun temizle.</p>
+        <div id="start-best" style="display:none">En iyi skor: <b id="start-best-val">0</b></div>
+        <div id="level-cards"></div>
+        <button onclick="startGame(1)">Oyuna Başla</button>
+      </div>
+    </section>
+
+    <section id="pause-overlay" class="overlay hidden">
+      <div class="modal">
+        <h2>Duraklatıldı</h2>
+        <p>Seviye: <b id="pause-lv">1</b> — Skor: <b id="pause-sc">0</b></p>
+        <button onclick="resumeGame()">Devam Et</button>
+        <button class="secondary" onclick="quitToMenu()">Menüye Dön</button>
+      </div>
+    </section>
+
+    <section id="levelup-overlay" class="overlay hidden">
+      <div class="modal">
+        <h2 id="lu-title">Seviye Tamam!</h2>
+        <p id="lu-sub"></p>
+        <div id="lu-stars" style="font-size:32px;margin:10px 0"></div>
+        <p>Skor: <b id="lu-score">0</b></p>
+        <button id="lu-btn" onclick="goNextLevel()">Sonraki Seviye</button>
+      </div>
+    </section>
+
+    <section id="gameover-overlay" class="overlay hidden">
+      <div class="modal">
+        <h2>Oyun Bitti</h2>
+        <p>Seviye: <b id="go-lv">1</b></p>
+        <p>Skor: <b id="go-sc">0</b> — En iyi: <b id="go-best">0</b></p>
+        <button onclick="startGame(1)">Tekrar Oyna</button>
+        <button class="secondary" onclick="quitToMenu()">Menü</button>
+      </div>
+    </section>
+
+    <section id="victory-overlay" class="overlay hidden">
+      <div class="modal">
+        <h2>🏆 Tebrikler!</h2>
+        <p>Tüm seviyeleri geçtin.</p>
+        <p>Skor: <b id="vic-sc">0</b> — En iyi: <b id="vic-best">0</b></p>
+        <button onclick="startGame(1)">Yeniden Başla</button>
+      </div>
+    </section>
+  </main>
+
+  <script src="block_blast.js"></script>
+</body>
+</html>
