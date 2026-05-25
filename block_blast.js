@@ -25,12 +25,43 @@ const COLORS=[
   '#f0d8a0','#f0b8cc','#a8d8d0','#d8c8a8','#c8e0a8'
 ];
 
-// ── CAT SPRITE CONFIG ─────────────────────────────────────────────
-const CAT_SHEET   = '2x2Cat64-sheet.png'; // sprite sheet filename (same folder)
-const CAT_FRAMES  = 6;                    // 6-frame idle loop
-const CAT_FPR     = 6;                    // all frames in one row
-const CAT_FPS     = 10;            // animation playback speed
-const CAT_IDLE_MS = 8000;          // ms between animations
+// ── CAT SPRITE DEFINITIONS ────────────────────────────────────────
+// Her giriş, belirli bir blok şekline hangi kedi sprite'ının geleceğini tanımlar.
+//
+//   shape  : Blok şekliyle birebir eşleşen 2D dizi (1 = dolu, 0 = boş)
+//   sheet  : Sprite sheet dosya adı (block_blast.js ile aynı klasörde olmalı)
+//   frames : Sheet'teki toplam frame sayısı
+//   fpr    : Satır başına frame sayısı (frames per row)
+//   fps    : Animasyon hızı (frame/saniye)
+//
+// Yeni bir kedi eklemek için buraya yeni bir nesne ekle. ▼
+const CAT_DEFS = [
+  {
+    shape: [[1, 1], [1, 1]],          // 2×2 tam blok
+    sheet: '2x2 Block Cat.png',
+    frames: 6,
+    fpr: 6,
+    fps: 10,
+  },
+  {
+    shape: [[1,1,1], [0,0,1], [0,0,1]],        // 3x3 upper right corner L-shape
+    sheet: '3x3 Upper Right Corner.png',
+    frames: 6,
+    fpr: 6,
+    fps: 10,
+  },
+  {
+    shape: [[1,0], [1,0], [1,1]],        // 2x3 Bottom Left Corner shape
+    sheet: '2x3 Bottom Left Corner.png',
+    frames: 6,
+    fpr: 6,
+    fps: 10,
+  },
+  // ── Buraya yeni tanımlar ekle ──────────────────────────────────
+  // { shape: [[1,0],[1,1],[1,0]], sheet: 'tShape.png', frames: 4, fpr: 4, fps: 8 },
+];
+
+const CAT_IDLE_MS = 8000; // Animasyonlar arası bekleme (ms)
 
 // ── STATE ─────────────────────────────────────────────────────────
 let board, obstacles, score, levelScore, bestScore, currentLevel, COLS, ROWS;
@@ -134,7 +165,7 @@ function startGame(lvNum) {
   placeObstacles(lv.obstacles);
   clearAllCats();
   stopCatTimer();
-  loadCatSheet(() => {}); // preload so first cat appears without delay
+  CAT_DEFS.forEach(def => loadCatSheetByDef(def, () => {})); // preload all sheets
   catAnimTimer = setInterval(() => catSprites.forEach(playCatAnim), CAT_IDLE_MS);
   buildGrid(COLS, ROWS);
   renderGrid();
@@ -401,7 +432,7 @@ function placeOnGrid(row, col) {
   placedGroups.push(gSet);
   gSet.forEach(i => { cellToGroup[i] = gIdx; });
 
-  const isCat = is2x2(p.shape);
+  const catDef = findCatDef(p.shape);
   const usedIdx = selectedPiece;
   usedFlags[usedIdx] = true;
   selectedPiece = null;
@@ -418,7 +449,7 @@ function placeOnGrid(row, col) {
   });
 
   setTimeout(() => {
-    if (isCat) createCatSprite(r, c);
+    if (catDef) createCatSprite(r, c, catDef);
     const { cleared, toClear } = applyClears();
     if (toClear.size) removeCatSprites(toClear);
     const pts = placed.length * 10 + cleared * 60;
@@ -444,15 +475,13 @@ function placeOnGrid(row, col) {
 
 // ── UI HELPERS ────────────────────────────────────────────────────
 function showScoreFly(pts, row, col) {
-  const gridEl  = document.getElementById('grid');
-  const cells   = document.querySelectorAll('#grid div');
+  const gridEl = document.getElementById('grid');
   const fly = document.createElement('div');
   fly.className = 'score-fly';
   fly.textContent = '+' + pts;
-  const cellRect = cells[row * COLS + col].getBoundingClientRect();
-  const gridRect = gridEl.getBoundingClientRect();
-  fly.style.top  = (cellRect.top  - gridRect.top  + 16) + 'px';
-  fly.style.left = (cellRect.left - gridRect.left + 16) + 'px';
+  const s = cs(), gap = 5, pad = 8;
+  fly.style.top  = (pad + row * (s + gap) + 16) + 'px';
+  fly.style.left = (pad + col * (s + gap) + 16) + 'px';
   gridEl.appendChild(fly);
   setTimeout(() => fly.remove(), 850);
 }
@@ -549,9 +578,18 @@ function newPieces() {
 }
 
 // ── CAT SPRITE SYSTEM ─────────────────────────────────────────────
-function is2x2(shape) {
-  return shape.length === 2 && shape[0].length === 2 &&
-    shape[0][0] && shape[0][1] && shape[1][0] && shape[1][1];
+
+// İki shape'in dolu hücrelerini karşılaştırır.
+function shapesMatch(a, b) {
+  if (a.length !== b.length) return false;
+  return a.every((row, r) =>
+    row.length === b[r]?.length && row.every((v, c) => !!v === !!b[r][c])
+  );
+}
+
+// Yerleştirilen shape için CAT_DEFS içinde eşleşen tanımı döner (yoksa null).
+function findCatDef(shape) {
+  return CAT_DEFS.find(def => shapesMatch(def.shape, shape)) ?? null;
 }
 
 function clearAllCats() {
@@ -563,89 +601,95 @@ function stopCatTimer() {
   if (catAnimTimer) { clearInterval(catAnimTimer); catAnimTimer = null; }
 }
 
-// Cache sheet metrics after first image load.
-let _catFW = null, _catFH = null, _catFPR = null;
+// Her sheet dosyası için { fw, fh } cache'i.
+const _catSheetCache = {};
 
-function loadCatSheet(cb) {
-  if (_catFW !== null) { cb(_catFW, _catFH, _catFPR); return; }
+function loadCatSheetByDef(def, cb) {
+  const key = def.sheet;
+  if (_catSheetCache[key]) {
+    const { fw, fh } = _catSheetCache[key];
+    cb(fw, fh);
+    return;
+  }
   const img = new Image();
   img.onload = () => {
-    const rows = Math.ceil(CAT_FRAMES / CAT_FPR);
-    _catFW  = img.naturalWidth  / CAT_FPR; // frame width  (= 64px)
-    _catFH  = img.naturalHeight / rows;    // frame height (= 80px)
-    _catFPR = CAT_FPR;
-    cb(_catFW, _catFH, _catFPR);
+    const sheetRows = Math.ceil(def.frames / def.fpr);
+    const fw = img.naturalWidth  / def.fpr;
+    const fh = img.naturalHeight / sheetRows;
+    _catSheetCache[key] = { fw, fh };
+    cb(fw, fh);
   };
-  img.onerror = () => console.warn('Cat sheet not found:', CAT_SHEET);
-  img.src = CAT_SHEET;
+  img.onerror = () => console.warn('Cat sheet bulunamadı:', key);
+  img.src = key;
 }
 
 function playCatAnim(sprite) {
   if (sprite.going || !sprite.el.parentNode) return;
   sprite.going = true;
   let f = 0;
-  const { el, fw, fh } = sprite;
-  const fpr = _catFPR || CAT_FPR;
+  const { el, fw, fh, def } = sprite;
   (function step() {
     if (!el.parentNode) { sprite.going = false; return; }
-    if (f >= CAT_FRAMES) {
+    if (f >= def.frames) {
       el.style.backgroundPositionX = '0px';
       el.style.backgroundPositionY = '0px';
       sprite.going = false;
       return;
     }
-    const sRow = Math.floor(f / fpr), sCol = f % fpr;
+    const sRow = Math.floor(f / def.fpr), sCol = f % def.fpr;
     el.style.backgroundPositionX = `${-(sCol * fw)}px`;
     el.style.backgroundPositionY = `${-(sRow * fh)}px`;
     f++;
-    setTimeout(step, 1000 / CAT_FPS);
+    setTimeout(step, 1000 / def.fps);
   })();
 }
 
-function createCatSprite(row, col) {
-  loadCatSheet((frameW, frameH, fpr) => {
-    const s       = cs(), gap = 5;
-    const blockPx = 2 * s + gap;       // 2×2 block on screen (e.g. 81px)
+function createCatSprite(row, col, def) {
+  loadCatSheetByDef(def, (frameW, frameH) => {
+    const s   = cs(), gap = 5;
+    const shapeCols = def.shape[0].length;
+    const shapeRows = def.shape.length;
+    const blockPxW  = shapeCols * s + (shapeCols - 1) * gap;
+    const blockPxH  = shapeRows * s + (shapeRows - 1) * gap;
 
-    // frameW = 64px body width; scale so it fills the full 2×2 block area.
-    const scale = blockPx / frameW;    // e.g. 81/64 ≈ 1.27
-    const sFW   = frameW * scale;      // = blockPx
-    const sFH   = frameH * scale;      // body + ears scaled
-    // Body is square (frameW × frameW), ears = extra height above body.
-    const earPx = Math.max(0, (frameH - frameW) * scale);
+    const scale = blockPxW / frameW;
+    const sFW   = frameW * scale;
+    const sFH   = frameH * scale;
+    // Sprite yüksekliği blok alanını aşıyorsa fazlalık kulak/baş olarak yukarı taşar.
+    const earPx = Math.max(0, sFH - blockPxH);
 
-    const gridEl   = document.getElementById('grid');
-    const cells    = document.querySelectorAll('#grid div');
-    const cellRect = cells[row * COLS + col].getBoundingClientRect();
-    const gridRect = gridEl.getBoundingClientRect();
-    const cellX    = cellRect.left - gridRect.left;
-    const cellY    = cellRect.top  - gridRect.top;
+    // Matematiksel konum: getBoundingClientRect yerine sabit grid metriklerini kullan.
+    // #grid: padding=8px, gap=5px — layout değişse de bu değerler sabit kalır.
+    const pad  = 8;
+    const cellX = pad + col * (s + gap);
+    const cellY = pad + row * (s + gap);
 
-    const sheetRows = Math.ceil(CAT_FRAMES / fpr);
+    const sheetRows = Math.ceil(def.frames / def.fpr);
 
     const el = document.createElement('div');
     el.className = 'cat-sprite';
-    // Shift up by earPx so the body sits on the 2×2 cells; ears poke above.
     el.style.left               = cellX + 'px';
     el.style.top                = (cellY - earPx) + 'px';
     el.style.width              = sFW + 'px';
     el.style.height             = sFH + 'px';
-    el.style.backgroundImage    = `url('${CAT_SHEET}')`;
-    el.style.backgroundSize     = `${fpr * sFW}px ${sheetRows * sFH}px`;
+    el.style.backgroundImage    = `url('${def.sheet}')`;
+    el.style.backgroundSize     = `${def.fpr * sFW}px ${sheetRows * sFH}px`;
     el.style.backgroundPosition = '0px 0px';
-    // Scale from the center of the body (not center of div which includes ears)
-    el.style.transformOrigin    = `${sFW * 0.5}px ${earPx + sFW * 0.5}px`;
+    el.style.transformOrigin    = `${sFW * 0.5}px ${earPx + blockPxH * 0.5}px`;
     el.style.transition         = 'transform .12s';
-    gridEl.appendChild(el);
+    document.getElementById('grid').appendChild(el);
 
-    catSprites.push({ r: row, c: col, el, fw: sFW, fh: sFH, going: false });
+    catSprites.push({ r: row, c: col, el, fw: sFW, fh: sFH, going: false, def });
   });
 }
 
 function removeCatSprites(toClear) {
-  catSprites = catSprites.filter(({ r, c, el }) => {
-    const cells = [r*COLS+c, r*COLS+c+1, (r+1)*COLS+c, (r+1)*COLS+c+1];
-    if (cells.some(i => toClear.has(i))) { el.remove(); return false; }
+  catSprites = catSprites.filter(({ r, c, el, def }) => {
+    const occupied = [];
+    def.shape.forEach((row, dr) => row.forEach((v, dc) => {
+      if (v) occupied.push((r + dr) * COLS + (c + dc));
+    }));
+    if (occupied.some(i => toClear.has(i))) { el.remove(); return false; }
     return true;
   });
 }
