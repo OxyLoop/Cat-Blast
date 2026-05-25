@@ -37,28 +37,25 @@ const COLORS=[
 // Yeni bir kedi eklemek için buraya yeni bir nesne ekle. ▼
 const CAT_DEFS = [
   {
-    shape: [[1, 1], [1, 1]],          // 2×2 tam blok
+    shape: [[1, 1], [1, 1]],
     sheet: '2x2 Block Cat.png',
-    frames: 6,
-    fpr: 6,
-    fps: 10,
+    frames: 6, fpr: 6, fps: 10,
+    earBodyY: 18,  // frame row where ear gap closes (transparent → fully opaque)
   },
   {
-    shape: [[1,1,1], [0,0,1], [0,0,1]],        // 3x3 upper right corner L-shape
+    shape: [[1,1,1], [0,0,1], [0,0,1]],
     sheet: '3x3 Upper Right Corner.png',
-    frames: 6,
-    fpr: 6,
-    fps: 10,
+    frames: 6, fpr: 6, fps: 10,
+    earBodyY: 18,
   },
   {
-    shape: [[1,0], [1,0], [1,1]],        // 2x3 Bottom Left Corner shape
+    shape: [[1,0], [1,0], [1,1]],
     sheet: '2x3 Bottom Left Corner.png',
-    frames: 6,
-    fpr: 6,
-    fps: 10,
+    frames: 6, fpr: 6, fps: 10,
+    earBodyY: 18,
   },
   // ── Buraya yeni tanımlar ekle ──────────────────────────────────
-  // { shape: [[1,0],[1,1],[1,0]], sheet: 'tShape.png', frames: 4, fpr: 4, fps: 8 },
+  // { shape: [[1,0],[1,1],[1,0]], sheet: 'tShape.png', frames: 4, fpr: 4, fps: 8, earBodyY: 18 },
 ];
 
 const CAT_IDLE_MS = 8000; // Animasyonlar arası bekleme (ms)
@@ -82,17 +79,18 @@ function init() {
   applyDark();
   buildLevelCards();
   if (bestScore > 0) {
-    document.getElementById('start-best').style.display = 'block';
+    document.getElementById('start-best').style.display = 'inline-block';
     document.getElementById('start-best-val').textContent = bestScore;
   }
   document.getElementById('bv').textContent = bestScore;
-  buildGrid(7, 7); // default empty grid before game starts
+  buildGrid(7, 7);
+  initDragHandlers();
 }
 
 function buildLevelCards() {
   const el = document.getElementById('level-cards');
   LEVELS.forEach(lv => {
-    el.innerHTML += `<div class="lc"><div class="ln">Lv.${lv.n}</div>${lv.label}<br><span style="font-size:10px">${lv.target} puan</span></div>`;
+    el.innerHTML += `<div class="lc" style="border-top-color:${lv.color}"><div class="ln">Lv.${lv.n}</div>${lv.label}<br><span style="font-size:10px">${lv.target} puan</span></div>`;
   });
 }
 
@@ -101,7 +99,14 @@ function getLv(n) { return LEVELS[Math.min(n, LEVELS.length) - 1]; }
 function randShape() { return SHAPES[Math.floor(Math.random() * SHAPES.length)]; }
 function randColor() { return COLORS[Math.floor(Math.random() * COLORS.length)]; }
 function newPiece() { return { shape: randShape(), color: randColor() }; }
-const cs = () => COLS <= 8 ? 58 : 50;
+const cs = () => {
+  const vw = window.innerWidth;
+  const isMobile = vw <= 520;
+  const containerW = isMobile ? vw : Math.min(vw * 0.95, 680);
+  const available = containerW - (isMobile ? 10 : 22) * 2 - 8 * 2;
+  const maxCell = COLS <= 8 ? 58 : 50;
+  return Math.min(maxCell, Math.floor((available - (COLS - 1) * 5) / COLS));
+};
 
 // ── AUDIO ─────────────────────────────────────────────────────────
 function getACtx() {
@@ -131,12 +136,18 @@ function playClick()     { beep(440, 0.07, 'sine', 0.08); }
 
 function toggleSound() {
   soundOn = !soundOn;
-  document.getElementById('sound-btn').textContent = soundOn ? '🔊' : '🔇';
+  const icon = soundOn ? '🔊' : '🔇';
+  document.getElementById('sound-btn').textContent = icon;
+  const m = document.getElementById('sound-btn-menu');
+  if (m) m.textContent = icon;
 }
 
 function applyDark() {
   document.body.classList.toggle('dark', darkMode);
-  document.getElementById('dark-btn').textContent = darkMode ? '☀️' : '🌙';
+  const icon = darkMode ? '☀️' : '🌙';
+  document.getElementById('dark-btn').textContent = icon;
+  const m = document.getElementById('dark-btn-menu');
+  if (m) m.textContent = icon;
 }
 
 function toggleDark() {
@@ -168,6 +179,7 @@ function startGame(lvNum) {
   CAT_DEFS.forEach(def => loadCatSheetByDef(def, () => {})); // preload all sheets
   catAnimTimer = setInterval(() => catSprites.forEach(playCatAnim), CAT_IDLE_MS);
   buildGrid(COLS, ROWS);
+  _lastCellSize = cs();
   renderGrid();
   updateScoreUI();
   updateProgress();
@@ -214,7 +226,7 @@ function quitToMenu() {
   playClick(); paused = false; gameActive = false;
   stopCatTimer(); clearAllCats();
   if (bestScore > 0) {
-    document.getElementById('start-best').style.display = 'block';
+    document.getElementById('start-best').style.display = 'inline-block';
     document.getElementById('start-best-val').textContent = bestScore;
   }
   showOverlay('start-overlay');
@@ -222,6 +234,7 @@ function quitToMenu() {
 
 document.addEventListener('keydown', e => {
   if (e.key === 'Escape') {
+    if (dragState) { cancelDrag(); return; }
     if (gameActive && !paused) pauseGame();
     else if (paused) resumeGame();
   }
@@ -242,9 +255,8 @@ function buildGrid(cols, rows) {
       c.style.height = size + 'px';
       c.dataset.r = y;
       c.dataset.c = x;
-      c.addEventListener('click',       () => placeOnGrid(y, x));
-      c.addEventListener('mouseenter',  () => { showPreview(y, x); applyGroupHover(y * COLS + x, true); });
-      c.addEventListener('mouseleave',  () => { clearPreview();     applyGroupHover(y * COLS + x, false); });
+      c.addEventListener('mouseenter',  () => applyGroupHover(y * COLS + x, true));
+      c.addEventListener('mouseleave',  () => { if (!dragState) clearPreview(); applyGroupHover(y * COLS + x, false); });
       g.appendChild(c);
     }
   }
@@ -254,17 +266,11 @@ function allCells() { return document.querySelectorAll('#grid div'); }
 
 function applyGroupHover(idx, on) {
   const gIdx = cellToGroup[idx];
-  if (gIdx === undefined) return; // empty cell — CSS :hover handles it
+  if (gIdx === undefined || !on) return;
   const gSet = placedGroups[gIdx];
   if (!gSet) return;
-  const ac = allCells();
-  gSet.forEach(i => ac[i]?.classList.toggle('group-hover', on));
-  // Scale and animate any cat sprite that belongs to this group
   catSprites.forEach(s => {
-    if (gSet.has(s.r * COLS + s.c)) {
-      s.el.style.transform = on ? 'scale(1.04)' : '';
-      if (on) playCatAnim(s);
-    }
+    if (gSet.has(s.r * COLS + s.c)) playCatAnim(s);
   });
 }
 
@@ -400,7 +406,10 @@ function animateClears(toClear) {
 function dismissPiece(i) {
   const card = document.getElementById('p' + i);
   card.classList.add('vanish');
-  setTimeout(() => { card.style.display = 'none'; }, 220);
+  setTimeout(() => {
+    card.style.visibility    = 'hidden';
+    card.style.pointerEvents = 'none';
+  }, 220);
 }
 
 function selectPiece(i) {
@@ -553,17 +562,44 @@ function showGameOver() {
 function renderPieces() {
   pieces.forEach((p, i) => {
     const card = document.getElementById('p' + i);
-    card.className = 'piece-card';
-    card.style.display = '';
-    const cols = p.shape[0].length;
-    card.innerHTML = `<div class="pmini" style="grid-template-columns:repeat(${cols},24px);gap:2px;"></div>`;
-    const grid = card.querySelector('.pmini');
-    p.shape.forEach(row => row.forEach(v => {
-      const c = document.createElement('div');
-      c.className = v ? 'pmini-cell' : 'pmini-cell empty';
-      if (v) c.style.background = p.color;
-      grid.appendChild(c);
-    }));
+    card.className       = 'piece-card';
+    card.style.display       = '';
+    card.style.visibility    = '';
+    card.style.pointerEvents = '';
+
+    const catDef = findCatDef(p.shape);
+    if (catDef) {
+      const cSz = 24, gap = 2;
+      const bW = catDef.shape[0].length * cSz + (catDef.shape[0].length - 1) * gap;
+      const bH = catDef.shape.length    * cSz + (catDef.shape.length    - 1) * gap;
+      card.innerHTML = '';
+      const wrap = document.createElement('div');
+      wrap.style.cssText = `position:relative;width:${bW}px;height:${bH}px;`;
+      card.appendChild(wrap);
+      loadCatSheetByDef(catDef, (frameW, frameH) => {
+        const rawScale = bH / (frameH - catDef.earBodyY);
+        const earPx = Math.round(catDef.earBodyY * rawScale);
+        const sFW   = Math.round(frameW * rawScale);
+        const sFH   = bH + earPx;
+        const sRows = Math.ceil(catDef.frames / catDef.fpr);
+        const el = document.createElement('div');
+        el.style.cssText = `position:absolute;left:0;top:${-earPx}px;width:${sFW}px;height:${sFH}px;`
+          + `background-image:url('${catDef.sheet}');`
+          + `background-size:${catDef.fpr * sFW}px ${sRows * sFH}px;`
+          + `background-position:0 0;background-repeat:no-repeat;pointer-events:none;`;
+        wrap.appendChild(el);
+      });
+    } else {
+      const cols = p.shape[0].length;
+      card.innerHTML = `<div class="pmini" style="grid-template-columns:repeat(${cols},24px);gap:2px;"></div>`;
+      const grid = card.querySelector('.pmini');
+      p.shape.forEach(row => row.forEach(v => {
+        const c = document.createElement('div');
+        c.className = v ? 'pmini-cell' : 'pmini-cell empty';
+        if (v) c.style.background = p.color;
+        grid.appendChild(c);
+      }));
+    }
   });
 }
 
@@ -652,11 +688,12 @@ function createCatSprite(row, col, def) {
     const blockPxW  = shapeCols * s + (shapeCols - 1) * gap;
     const blockPxH  = shapeRows * s + (shapeRows - 1) * gap;
 
-    const scale = blockPxW / frameW;
-    const sFW   = frameW * scale;
-    const sFH   = frameH * scale;
-    // Sprite yüksekliği blok alanını aşıyorsa fazlalık kulak/baş olarak yukarı taşar.
-    const earPx = Math.max(0, sFH - blockPxH);
+    // Scale so the body zone covers exactly blockPxH; round to integers to
+    // prevent subpixel gaps at the bottom and animation jitter left-right.
+    const rawScale = blockPxH / (frameH - def.earBodyY);
+    const earPx = Math.round(def.earBodyY * rawScale);
+    const sFW   = Math.round(frameW * rawScale);
+    const sFH   = blockPxH + earPx;  // exact: sprite_bottom = cellY + blockPxH
 
     // Matematiksel konum: getBoundingClientRect yerine sabit grid metriklerini kullan.
     // #grid: padding=8px, gap=5px — layout değişse de bu değerler sabit kalır.
@@ -675,8 +712,7 @@ function createCatSprite(row, col, def) {
     el.style.backgroundImage    = `url('${def.sheet}')`;
     el.style.backgroundSize     = `${def.fpr * sFW}px ${sheetRows * sFH}px`;
     el.style.backgroundPosition = '0px 0px';
-    el.style.transformOrigin    = `${sFW * 0.5}px ${earPx + blockPxH * 0.5}px`;
-    el.style.transition         = 'transform .12s';
+    el.style.backgroundRepeat   = 'no-repeat';
     document.getElementById('grid').appendChild(el);
 
     catSprites.push({ r: row, c: col, el, fw: sFW, fh: sFH, going: false, def });
@@ -739,6 +775,160 @@ function debugPickShape(i) {
   selectPiece(0);
   setMsg('Test bloğu slot 0\'a eklendi — yerleştir!');
 }
+
+// ── DRAG & DROP ───────────────────────────────────────────────────
+let dragState = null; // { idx, shape, ghostEl, isTouch }
+
+function startDrag(idx, clientX, clientY, isTouch) {
+  if (!gameActive || paused || usedFlags[idx]) return;
+  if (dragState) cancelDrag();
+  playSelect();
+  selectedPiece = idx;
+  document.querySelectorAll('.piece-card').forEach((c, j) =>
+    c.classList.toggle('selected', j === idx));
+
+  const p = pieces[idx];
+  const size = cs(), gap = 5, cols = p.shape[0].length;
+  const catDef = findCatDef(p.shape);
+
+  const ghost = document.createElement('div');
+  ghost.style.cssText = 'position:fixed;pointer-events:none;z-index:999;opacity:.75;transition:none;';
+  const gr = document.createElement('div');
+  gr.style.cssText = `position:relative;display:grid;grid-template-columns:repeat(${cols},${size}px);gap:${gap}px;`;
+  p.shape.forEach(row => row.forEach(v => {
+    const cell = document.createElement('div');
+    cell.style.cssText = v
+      ? `width:${size}px;height:${size}px;border-radius:9px;background:${p.color};box-shadow:inset 0 -4px 0 rgba(0,0,0,.13);`
+      : `width:${size}px;height:${size}px;`;
+    gr.appendChild(cell);
+  }));
+  if (catDef) {
+    const bW = catDef.shape[0].length * size + (catDef.shape[0].length - 1) * gap;
+    const bH = catDef.shape.length    * size + (catDef.shape.length    - 1) * gap;
+    loadCatSheetByDef(catDef, (frameW, frameH) => {
+      const rawScale = bH / (frameH - catDef.earBodyY);
+      const earPx = Math.round(catDef.earBodyY * rawScale);
+      const sFW   = Math.round(frameW * rawScale);
+      const sFH   = bH + earPx;
+      const sRows = Math.ceil(catDef.frames / catDef.fpr);
+      const el = document.createElement('div');
+      el.style.cssText = `position:absolute;left:0;top:${-earPx}px;width:${sFW}px;height:${sFH}px;`
+        + `background-image:url('${catDef.sheet}');`
+        + `background-size:${catDef.fpr * sFW}px ${sRows * sFH}px;`
+        + `background-position:0 0;background-repeat:no-repeat;pointer-events:none;`;
+      gr.appendChild(el);
+    });
+  }
+  ghost.appendChild(gr);
+  document.body.appendChild(ghost);
+  document.body.style.cursor = 'grabbing';
+
+  dragState = { idx, shape: p.shape, ghostEl: ghost, isTouch };
+  moveDrag(clientX, clientY);
+}
+
+function moveDrag(clientX, clientY) {
+  if (!dragState) return;
+  const { shape, ghostEl, isTouch } = dragState;
+  const size = cs(), gap = 5;
+  const { dr, dc } = firstFilledOffset(shape);
+  const uplift = isTouch ? shape.length * (size + gap) + 24 : 0;
+
+  ghostEl.style.left = (clientX - dc * (size + gap)) + 'px';
+  ghostEl.style.top  = (clientY - dr * (size + gap) - uplift) + 'px';
+
+  const hitEl = document.elementFromPoint(clientX, clientY - uplift);
+  if (hitEl && hitEl.dataset.r !== undefined) {
+    showPreview(+hitEl.dataset.r, +hitEl.dataset.c);
+  } else {
+    clearPreview();
+  }
+}
+
+function endDrag(clientX, clientY) {
+  if (!dragState) return;
+  const { ghostEl, shape, isTouch } = dragState;
+  const uplift = isTouch ? shape.length * (cs() + 5) + 24 : 0;
+  ghostEl.remove();
+  document.body.style.cursor = '';
+  dragState = null;
+
+  const hitEl = document.elementFromPoint(clientX, clientY - uplift);
+  if (hitEl && hitEl.dataset.r !== undefined) {
+    placeOnGrid(+hitEl.dataset.r, +hitEl.dataset.c);
+  } else {
+    clearPreview();
+    selectedPiece = null;
+    document.querySelectorAll('.piece-card').forEach(c => c.classList.remove('selected'));
+  }
+}
+
+function cancelDrag() {
+  if (!dragState) return;
+  dragState.ghostEl.remove();
+  document.body.style.cursor = '';
+  dragState = null;
+  clearPreview();
+  selectedPiece = null;
+  document.querySelectorAll('.piece-card').forEach(c => c.classList.remove('selected'));
+}
+
+function initDragHandlers() {
+  for (let i = 0; i < 3; i++) {
+    const card = document.getElementById('p' + i);
+    const idx  = i;
+    card.addEventListener('mousedown', e => {
+      if (e.button !== 0) return;
+      e.preventDefault();
+      startDrag(idx, e.clientX, e.clientY, false);
+    });
+    card.addEventListener('touchstart', e => {
+      e.preventDefault();
+      const t = e.touches[0];
+      startDrag(idx, t.clientX, t.clientY, true);
+    }, { passive: false });
+  }
+
+  document.addEventListener('mousemove', e => {
+    if (!dragState) return;
+    if (!(e.buttons & 1)) { cancelDrag(); return; }
+    moveDrag(e.clientX, e.clientY);
+  });
+  document.addEventListener('mouseup', e => {
+    if (dragState) endDrag(e.clientX, e.clientY);
+  });
+  document.addEventListener('touchmove', e => {
+    if (!dragState) return;
+    e.preventDefault();
+    moveDrag(e.touches[0].clientX, e.touches[0].clientY);
+  }, { passive: false });
+  document.addEventListener('touchend', e => {
+    if (!dragState) return;
+    e.preventDefault();
+    endDrag(e.changedTouches[0].clientX, e.changedTouches[0].clientY);
+  }, { passive: false });
+  document.addEventListener('touchcancel', cancelDrag);
+}
+
+// ── RESIZE / ORIENTATION CHANGE ───────────────────────────────────
+function repositionCatSprites() {
+  const snapshot = catSprites.splice(0);
+  snapshot.forEach(s => { s.el.remove(); createCatSprite(s.r, s.c, s.def); });
+}
+
+let _resizeTimer, _lastCellSize = 0;
+window.addEventListener('resize', () => {
+  clearTimeout(_resizeTimer);
+  _resizeTimer = setTimeout(() => {
+    if (!gameActive) return;
+    const newSize = cs();
+    if (newSize === _lastCellSize) return; // boyut değişmediyse yeniden çizme
+    _lastCellSize = newSize;
+    buildGrid(COLS, ROWS);
+    renderGrid();
+    repositionCatSprites();
+  }, 150);
+});
 
 // ── BOOTSTRAP ─────────────────────────────────────────────────────
 init();
