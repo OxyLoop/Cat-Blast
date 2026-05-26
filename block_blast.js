@@ -38,31 +38,31 @@ const COLORS=[
 const CAT_DEFS = [
   {
     shape: [[1, 1], [1, 1]],
-    sheet: '2x2 Block Cat.png',
+    sheet: 'sprites/2x2 Block Cat.png',
     frames: 6, fpr: 6, fps: 10,
     earBodyY: 18,  // frame row where ear gap closes (transparent → fully opaque)
   },
   {
     shape: [[1,1,1], [0,0,1], [0,0,1]],
-    sheet: '3x3 Upper Right Corner.png',
+    sheet: 'sprites/3x3 Upper Right Corner.png',
     frames: 6, fpr: 6, fps: 10,
     earBodyY: 18,
   },
   {
     shape: [[1,0], [1,0], [1,1]],
-    sheet: '2x3 Bottom Left Corner.png',
+    sheet: 'sprites/2x3 Bottom Left Corner.png',
     frames: 6, fpr: 6, fps: 10,
     earBodyY: 18,
   },
   {
     shape: [[1]],
-    sheet: '1x1 Block Cat.png',
+    sheet: 'sprites/1x1 Block Cat.png',
     frames: 6, fpr: 6, fps: 10,
     earBodyY: 18,
   },
   {
     shape: [[1],[1]],
-    sheet: '1x2 Vertical Block.png',
+    sheet: 'sprites/1x2 Vertical Block.png',
     frames: 6, fpr: 6, fps: 10,
     earBodyY: 18,
   },
