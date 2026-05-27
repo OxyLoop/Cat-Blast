@@ -160,7 +160,7 @@ function playClick()     { beep(440, 0.07, 'sine', 0.08); }
 
 function initBgMusic() {
   if (bgMusic) return;
-  bgMusic = new Audio('sounds/Theme song.mp3');
+  bgMusic = new Audio('Sounds/Theme%20song.mp3');
   bgMusic.loop   = true;
   bgMusic.volume = soundOn ? masterVolume : 0;
 }
