@@ -274,6 +274,47 @@
       border-radius: 16px;
       letter-spacing: .3px;
     }
+    .endless-btn { background: #7c5cbf; }
+    body.dark .endless-btn { background: #9b7dd4; }
+    .vol-slider {
+      -webkit-appearance: none;
+      width: 80px;
+      height: 4px;
+      border-radius: 2px;
+      background: #cdd5de;
+      outline: none;
+      cursor: pointer;
+      vertical-align: middle;
+    }
+    .vol-slider::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      width: 16px;
+      height: 16px;
+      border-radius: 50%;
+      background: #263238;
+      cursor: pointer;
+    }
+    .vol-slider::-moz-range-thumb {
+      width: 16px;
+      height: 16px;
+      border-radius: 50%;
+      background: #263238;
+      border: none;
+      cursor: pointer;
+    }
+    body.dark .vol-slider { background: #3a4a60; }
+    body.dark .vol-slider::-webkit-slider-thumb { background: #9b7dd4; }
+    body.dark .vol-slider::-moz-range-thumb { background: #9b7dd4; }
+    .vol-row {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      justify-content: center;
+      margin-top: 10px;
+      font-size: 13px;
+      opacity: .8;
+    }
+    @media (max-width: 520px) { #vol-slider-topbar { display: none; } }
     body.dark .lc { background: #1e2840; }
     body.dark .best-badge { color: #3a2000; }
     body.dark .start-settings button { background: #1e2840; }
@@ -425,6 +466,7 @@
       <h1>🐱 Cat Block Blast</h1>
       <div>
         <button id="sound-btn" onclick="toggleSound()">🔊</button>
+        <input type="range" class="vol-slider" id="vol-slider-topbar" min="0" max="100" value="70" oninput="setVolume(this.value)">
         <button id="dark-btn" onclick="toggleDark()">🌙</button>
         <button id="debug-btn" class="secondary" onclick="toggleDebugPanel()" title="Test Paneli">🔧</button>
         <button class="secondary" onclick="pauseGame()">Duraklat</button>
@@ -471,7 +513,11 @@
           <button id="sound-btn-menu" onclick="toggleSound()">🔊</button>
           <button id="dark-btn-menu" onclick="toggleDark()">🌙</button>
         </div>
+        <div class="vol-row">
+          🎵 <input type="range" class="vol-slider" id="vol-slider-menu" min="0" max="100" value="70" oninput="setVolume(this.value)"> 🔊
+        </div>
         <button class="start-play-btn" onclick="startGame(1)">Oyuna Başla</button>
+        <button class="start-play-btn endless-btn" onclick="startEndless()">♾️ Sonsuz Mod</button>
       </div>
     </section>
 
@@ -499,7 +545,7 @@
         <h2>Oyun Bitti</h2>
         <p>Seviye: <b id="go-lv">1</b></p>
         <p>Skor: <b id="go-sc">0</b> — En iyi: <b id="go-best">0</b></p>
-        <button onclick="startGame(1)">Tekrar Oyna</button>
+        <button id="go-restart-btn" onclick="restartAfterGameOver()">Tekrar Oyna</button>
         <button class="secondary" onclick="quitToMenu()">Menü</button>
       </div>
     </section>

@@ -77,7 +77,10 @@ let board, obstacles, score, levelScore, bestScore, currentLevel, COLS, ROWS;
 let pieces, selectedPiece, usedFlags;
 let placedGroups = [], cellToGroup = {}; // group hover tracking
 let soundOn = true, paused = false, gameActive = false;
+let endlessMode = false;
 let darkMode = false;
+let bgMusic = null;
+let masterVolume = 0.7;
 let audioCtx;
 let catSprites = [], catAnimTimer = null;
 
@@ -85,10 +88,13 @@ try { bestScore = parseInt(localStorage.getItem('bb_lv2_best') || '0'); }
 catch(e) { bestScore = 0; }
 try { darkMode = localStorage.getItem('bb_dark') === '1'; }
 catch(e) {}
+try { masterVolume = parseFloat(localStorage.getItem('bb_vol') ?? '0.7'); }
+catch(e) {}
 
 // ── INIT (called on page load) ────────────────────────────────────
 function init() {
   applyDark();
+  syncVolumeSliders();
   buildLevelCards();
   if (bestScore > 0) {
     document.getElementById('start-best').style.display = 'inline-block';
@@ -146,12 +152,46 @@ function playLevelUp()   { [523,659,784,880,1046].forEach((f,i) => setTimeout(()
 function playVictory()   { [523,659,784,1046,1318,1568].forEach((f,i) => setTimeout(() => beep(f, 0.18, 'sine', 0.15), i*80)); }
 function playClick()     { beep(440, 0.07, 'sine', 0.08); }
 
+function initBgMusic() {
+  if (bgMusic) return;
+  bgMusic = new Audio('sounds/Theme song.mp3');
+  bgMusic.loop   = true;
+  bgMusic.volume = soundOn ? masterVolume : 0;
+}
+
+function playBgMusic() {
+  if (!soundOn) return;
+  initBgMusic();
+  bgMusic.play().catch(() => {});
+}
+
+function pauseBgMusic() {
+  if (bgMusic) bgMusic.pause();
+}
+
+function syncVolumeSliders() {
+  const val = Math.round(masterVolume * 100);
+  document.querySelectorAll('.vol-slider').forEach(s => { s.value = val; });
+}
+
+function setVolume(val) {
+  masterVolume = val / 100;
+  if (bgMusic) bgMusic.volume = soundOn ? masterVolume : 0;
+  syncVolumeSliders();
+  try { localStorage.setItem('bb_vol', masterVolume); } catch(e) {}
+}
+
 function toggleSound() {
   soundOn = !soundOn;
   const icon = soundOn ? '🔊' : '🔇';
   document.getElementById('sound-btn').textContent = icon;
   const m = document.getElementById('sound-btn-menu');
   if (m) m.textContent = icon;
+  if (soundOn) {
+    if (gameActive && !paused) playBgMusic();
+  } else {
+    pauseBgMusic();
+  }
 }
 
 function applyDark() {
@@ -174,7 +214,17 @@ function showOverlay(id) { OVERLAYS.forEach(o => document.getElementById(o).clas
 function hideAll() { OVERLAYS.forEach(o => document.getElementById(o).classList.add('hidden')); }
 
 // ── GAME FLOW ─────────────────────────────────────────────────────
-function startGame(lvNum) {
+function startEndless() {
+  endlessMode = true;
+  startGame(1, true);
+}
+
+function restartAfterGameOver() {
+  endlessMode ? startGame(1, true) : startGame(1);
+}
+
+function startGame(lvNum, endless = false) {
+  endlessMode = !!endless;
   playClick(); hideAll();
   currentLevel = lvNum || 1;
   const lv = getLv(currentLevel);
@@ -185,6 +235,7 @@ function startGame(lvNum) {
   if (lvNum === 1) score = 0;
   levelScore = 0;
   paused = false; gameActive = true;
+  playBgMusic();
   placeObstacles(lv.obstacles);
   clearAllCats();
   stopCatTimer();
@@ -227,15 +278,17 @@ function goNextLevel() {
 function pauseGame() {
   if (!gameActive || paused) return;
   paused = true; playClick();
+  pauseBgMusic();
   document.getElementById('pause-lv').textContent = currentLevel;
   document.getElementById('pause-sc').textContent = score;
   showOverlay('pause-overlay');
 }
 
-function resumeGame() { playClick(); paused = false; hideAll(); }
+function resumeGame() { playClick(); paused = false; hideAll(); playBgMusic(); }
 
 function quitToMenu() {
   playClick(); paused = false; gameActive = false;
+  pauseBgMusic();
   stopCatTimer(); clearAllCats();
   if (bestScore > 0) {
     document.getElementById('start-best').style.display = 'inline-block';
@@ -486,7 +539,7 @@ function placeOnGrid(row, col) {
       if (cleared >= 2) setTimeout(() => { playCombo(); showCombo(cleared); }, 360);
     }
     const lv = getLv(currentLevel);
-    if (levelScore >= lv.target) { setTimeout(showLevelUp, cleared > 0 ? 500 : 250); return; }
+    if (!endlessMode && levelScore >= lv.target) { setTimeout(showLevelUp, cleared > 0 ? 500 : 250); return; }
     const allUsed = usedFlags.every(Boolean);
     if (allUsed) setTimeout(() => newPieces(), cleared > 0 ? 420 : 200);
     else if (!anyRemainingCanPlace()) setTimeout(showGameOver, cleared > 0 ? 420 : 200);
@@ -525,6 +578,15 @@ function updateScoreUI() {
 }
 
 function updateProgress() {
+  if (endlessMode) {
+    const cycle = 500;
+    const pct = (score % cycle) / cycle * 100;
+    document.getElementById('progress-bar').style.width      = pct + '%';
+    document.getElementById('progress-bar').style.background = '#9b7dd4';
+    document.getElementById('prog-left').textContent  = '♾️ Sonsuz Mod';
+    document.getElementById('prog-right').textContent = score + ' puan';
+    return;
+  }
   const lv  = getLv(currentLevel);
   const pct = Math.min(100, (levelScore / lv.target) * 100);
   document.getElementById('progress-bar').style.width      = pct + '%';
@@ -555,6 +617,7 @@ function showLevelUp() {
 
 function showVictory() {
   stopCatTimer();
+  pauseBgMusic();
   playVictory();
   document.getElementById('vic-sc').textContent   = score;
   document.getElementById('vic-best').textContent = bestScore;
@@ -564,9 +627,11 @@ function showVictory() {
 function showGameOver() {
   gameActive = false; playGameOver();
   stopCatTimer();
-  document.getElementById('go-lv').textContent   = currentLevel;
+  pauseBgMusic();
+  document.getElementById('go-lv').textContent   = endlessMode ? '♾️ Sonsuz' : currentLevel;
   document.getElementById('go-sc').textContent   = score;
   document.getElementById('go-best').textContent = bestScore;
+  document.getElementById('go-restart-btn').textContent = endlessMode ? '♾️ Tekrar Oyna' : 'Tekrar Oyna';
   showOverlay('gameover-overlay');
 }
 
