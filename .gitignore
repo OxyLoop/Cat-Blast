@@ -1,0 +1,11 @@
+# Dependencies
+node_modules/
+
+# Capacitor generated web assets (www kaynak dosyalardan üretiliyor)
+www/
+
+# Android project (npx cap add android ile yeniden oluşturulabilir)
+android/
+
+# npm
+package-lock.json

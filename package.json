@@ -1,0 +1,25 @@
+{
+  "name": "cat-blast",
+  "version": "1.0.0",
+  "description": "Javascript Cat Blast Game",
+  "main": "block_blast.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/OxyLoop/Cat-Blast.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/OxyLoop/Cat-Blast/issues"
+  },
+  "homepage": "https://github.com/OxyLoop/Cat-Blast#readme",
+  "dependencies": {
+    "@capacitor/android": "^8.3.4",
+    "@capacitor/cli": "^8.3.4",
+    "@capacitor/core": "^8.3.4"
+  }
+}
