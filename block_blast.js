@@ -1,10 +1,10 @@
-// ── LEVEL DEFINITIONS ─────────────────────────────────────────────
+﻿// â”€â”€ LEVEL DEFINITIONS â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 const LEVELS=[
-  {n:1,grid:7,obstacles:0, target:400, color:'#a8c5e8',label:'Başlangıç',desc:'7×7 grid, engel yok.'},
-  {n:2,grid:8,obstacles:4, target:700, color:'#a8d5b8',label:'Orta',     desc:'8×8 grid, 4 engel.'},
-  {n:3,grid:8,obstacles:10,target:1100,color:'#f0d8a0',label:'Zor',      desc:'8×8 grid, 10 engel.'},
-  {n:4,grid:9,obstacles:14,target:1600,color:'#f0b8cc',label:'Çok Zor',  desc:'9×9 grid, 14 engel.'},
-  {n:5,grid:9,obstacles:20,target:2200,color:'#c5b8e8',label:'Uzman',    desc:'9×9 grid, 20 engel!'},
+  {n:1,grid:7,obstacles:0, target:400, color:'#a8c5e8',label:'BaÅŸlangÄ±Ã§',desc:'7Ã—7 grid, engel yok.'},
+  {n:2,grid:8,obstacles:4, target:700, color:'#a8d5b8',label:'Orta',     desc:'8Ã—8 grid, 4 engel.'},
+  {n:3,grid:8,obstacles:10,target:1100,color:'#f0d8a0',label:'Zor',      desc:'8Ã—8 grid, 10 engel.'},
+  {n:4,grid:9,obstacles:14,target:1600,color:'#f0b8cc',label:'Ã‡ok Zor',  desc:'9Ã—9 grid, 14 engel.'},
+  {n:5,grid:9,obstacles:20,target:2200,color:'#c5b8e8',label:'Uzman',    desc:'9Ã—9 grid, 20 engel!'},
 ];
 
 const SHAPES=[
@@ -25,22 +25,22 @@ const COLORS=[
   '#f0d8a0','#f0b8cc','#a8d8d0','#d8c8a8','#c8e0a8'
 ];
 
-// ── CAT SPRITE DEFINITIONS ────────────────────────────────────────
-// Her giriş, belirli bir blok şekline hangi kedi sprite'ının geleceğini tanımlar.
+// â”€â”€ CAT SPRITE DEFINITIONS â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// Her giriÅŸ, belirli bir blok ÅŸekline hangi kedi sprite'Ä±nÄ±n geleceÄŸini tanÄ±mlar.
 //
-//   shape  : Blok şekliyle birebir eşleşen 2D dizi (1 = dolu, 0 = boş)
-//   sheet  : Sprite sheet dosya adı (block_blast.js ile aynı klasörde olmalı)
-//   frames : Sheet'teki toplam frame sayısı
-//   fpr    : Satır başına frame sayısı (frames per row)
-//   fps    : Animasyon hızı (frame/saniye)
+//   shape  : Blok ÅŸekliyle birebir eÅŸleÅŸen 2D dizi (1 = dolu, 0 = boÅŸ)
+//   sheet  : Sprite sheet dosya adÄ± (block_blast.js ile aynÄ± klasÃ¶rde olmalÄ±)
+//   frames : Sheet'teki toplam frame sayÄ±sÄ±
+//   fpr    : SatÄ±r baÅŸÄ±na frame sayÄ±sÄ± (frames per row)
+//   fps    : Animasyon hÄ±zÄ± (frame/saniye)
 //
-// Yeni bir kedi eklemek için buraya yeni bir nesne ekle. ▼
+// Yeni bir kedi eklemek iÃ§in buraya yeni bir nesne ekle. â–¼
 const CAT_DEFS = [
   {
     shape: [[1, 1], [1, 1]],
     sheet: 'sprites/2x2 Block Cat.png',
     frames: 6, fpr: 6, fps: 10,
-    earBodyY: 18,  // frame row where ear gap closes (transparent → fully opaque)
+    earBodyY: 18,  // frame row where ear gap closes (transparent â†’ fully opaque)
   },
   {
     shape: [[1,1,1], [0,0,1], [0,0,1]],
@@ -72,13 +72,13 @@ const CAT_DEFS = [
     frames: 5, fpr: 5, fps: 10,
     earBodyY: 18,
   },
-  // ── Buraya yeni tanımlar ekle ──────────────────────────────────
+  // â”€â”€ Buraya yeni tanÄ±mlar ekle â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   // { shape: [[1,0],[1,1],[1,0]], sheet: 'tShape.png', frames: 4, fpr: 4, fps: 8, earBodyY: 18 },
 ];
 
-const CAT_IDLE_MS = 8000; // Animasyonlar arası bekleme (ms)
+const CAT_IDLE_MS = 8000; // Animasyonlar arasÄ± bekleme (ms)
 
-// ── STATE ─────────────────────────────────────────────────────────
+// â”€â”€ STATE â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 let board, obstacles, score, levelScore, bestScore, currentLevel, COLS, ROWS;
 let pieces, selectedPiece, usedFlags;
 let placedGroups = [], cellToGroup = {}; // group hover tracking
@@ -97,7 +97,7 @@ catch(e) {}
 try { masterVolume = parseFloat(localStorage.getItem('bb_vol') ?? '0.7'); }
 catch(e) {}
 
-// ── INIT (called on page load) ────────────────────────────────────
+// â”€â”€ INIT (called on page load) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 function init() {
   applyDark();
   syncVolumeSliders();
@@ -118,7 +118,7 @@ function buildLevelCards() {
   });
 }
 
-// ── HELPERS ───────────────────────────────────────────────────────
+// â”€â”€ HELPERS â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 function getLv(n) { return LEVELS[Math.min(n, LEVELS.length) - 1]; }
 function randShape() { return SHAPES[Math.floor(Math.random() * SHAPES.length)]; }
 function randColor() { return COLORS[Math.floor(Math.random() * COLORS.length)]; }
@@ -132,7 +132,7 @@ const cs = () => {
   return Math.min(maxCell, Math.floor((available - (COLS - 1) * 5) / COLS));
 };
 
-// ── AUDIO ─────────────────────────────────────────────────────────
+// â”€â”€ AUDIO â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 function getACtx() {
   if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
   return audioCtx;
@@ -160,7 +160,7 @@ function playClick()     { beep(440, 0.07, 'sine', 0.08); }
 
 function initBgMusic() {
   if (bgMusic) return;
-  bgMusic = new Audio('sounds/Theme song.mp3');
+  bgMusic = new Audio('Sounds/Theme%20song.mp3');
   bgMusic.loop   = true;
   bgMusic.volume = soundOn ? masterVolume : 0;
 }
@@ -189,7 +189,7 @@ function setVolume(val) {
 
 function toggleSound() {
   soundOn = !soundOn;
-  const icon = soundOn ? '🔊' : '🔇';
+  const icon = soundOn ? 'ğŸ”Š' : 'ğŸ”‡';
   document.getElementById('sound-btn').textContent = icon;
   const m = document.getElementById('sound-btn-menu');
   if (m) m.textContent = icon;
@@ -202,7 +202,7 @@ function toggleSound() {
 
 function applyDark() {
   document.body.classList.toggle('dark', darkMode);
-  const icon = darkMode ? '☀️' : '🌙';
+  const icon = darkMode ? 'â˜€ï¸' : 'ğŸŒ™';
   document.getElementById('dark-btn').textContent = icon;
   const m = document.getElementById('dark-btn-menu');
   if (m) m.textContent = icon;
@@ -214,12 +214,12 @@ function toggleDark() {
   applyDark();
 }
 
-// ── OVERLAYS ──────────────────────────────────────────────────────
+// â”€â”€ OVERLAYS â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 const OVERLAYS = ['start-overlay','pause-overlay','levelup-overlay','gameover-overlay','victory-overlay'];
 function showOverlay(id) { OVERLAYS.forEach(o => document.getElementById(o).classList.toggle('hidden', o !== id)); }
 function hideAll() { OVERLAYS.forEach(o => document.getElementById(o).classList.add('hidden')); }
 
-// ── GAME FLOW ─────────────────────────────────────────────────────
+// â”€â”€ GAME FLOW â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 function startEndless() {
   endlessMode = true;
   startGame(1, true);
@@ -311,7 +311,7 @@ document.addEventListener('keydown', e => {
   }
 });
 
-// ── GRID ──────────────────────────────────────────────────────────
+// â”€â”€ GRID â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 function buildGrid(cols, rows) {
   COLS = cols; ROWS = rows;
   const size = cs();
@@ -365,7 +365,7 @@ function renderGrid() {
   });
 }
 
-// ── ANCHOR HELPERS ────────────────────────────────────────────────
+// â”€â”€ ANCHOR HELPERS â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 // Returns row/col offset of the top-left filled cell in a shape.
 function firstFilledOffset(shape) {
   for (let dr = 0; dr < shape.length; dr++)
@@ -383,7 +383,7 @@ function adjustedAnchor(shape, row, col) {
   return { r, c };
 }
 
-// ── PREVIEW ───────────────────────────────────────────────────────
+// â”€â”€ PREVIEW â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 function showPreview(row, col) {
   if (selectedPiece === null || paused) return;
   clearPreview();
@@ -411,7 +411,7 @@ function clearPreview() {
   });
 }
 
-// ── PLACEMENT LOGIC ───────────────────────────────────────────────
+// â”€â”€ PLACEMENT LOGIC â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 function canPlace(shape, row, col) {
   for (let dy = 0; dy < shape.length; dy++)
     for (let dx = 0; dx < shape[dy].length; dx++) {
@@ -487,16 +487,16 @@ function selectPiece(i) {
   if (!gameActive || paused || usedFlags[i]) return;
   selectedPiece = i; playSelect();
   document.querySelectorAll('.piece-card').forEach((c, j) => c.classList.toggle('selected', j === i && !usedFlags[j]));
-  setMsg('Bloğu yerleştirmek için grid üzerine tıkla');
+  setMsg('BloÄŸu yerleÅŸtirmek iÃ§in grid Ã¼zerine tÄ±kla');
 }
 
 function placeOnGrid(row, col) {
   if (!gameActive || paused) return;
-  if (selectedPiece === null) { setMsg('Önce bir blok seç!'); return; }
+  if (selectedPiece === null) { setMsg('Ã–nce bir blok seÃ§!'); return; }
   if (usedFlags[selectedPiece]) return;
   const p = pieces[selectedPiece];
   const { r, c } = adjustedAnchor(p.shape, row, col);
-  if (!canPlace(p.shape, r, c)) { setMsg('Buraya sığmıyor!'); return; }
+  if (!canPlace(p.shape, r, c)) { setMsg('Buraya sÄ±ÄŸmÄ±yor!'); return; }
   playPlace();
 
   const placed = [];
@@ -549,11 +549,11 @@ function placeOnGrid(row, col) {
     const allUsed = usedFlags.every(Boolean);
     if (allUsed) setTimeout(() => newPieces(), cleared > 0 ? 420 : 200);
     else if (!anyRemainingCanPlace()) setTimeout(showGameOver, cleared > 0 ? 420 : 200);
-    else setMsg('Bir blok seç, sonra grid üzerine tıkla');
+    else setMsg('Bir blok seÃ§, sonra grid Ã¼zerine tÄ±kla');
   }, placed.length * 25 + 100);
 }
 
-// ── UI HELPERS ────────────────────────────────────────────────────
+// â”€â”€ UI HELPERS â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 function showScoreFly(pts, row, col) {
   const gridEl = document.getElementById('grid');
   const fly = document.createElement('div');
@@ -589,7 +589,7 @@ function updateProgress() {
     const pct = (score % cycle) / cycle * 100;
     document.getElementById('progress-bar').style.width      = pct + '%';
     document.getElementById('progress-bar').style.background = '#9b7dd4';
-    document.getElementById('prog-left').textContent  = '♾️ Sonsuz Mod';
+    document.getElementById('prog-left').textContent  = 'â™¾ï¸ Sonsuz Mod';
     document.getElementById('prog-right').textContent = score + ' puan';
     return;
   }
@@ -597,7 +597,7 @@ function updateProgress() {
   const pct = Math.min(100, (levelScore / lv.target) * 100);
   document.getElementById('progress-bar').style.width      = pct + '%';
   document.getElementById('progress-bar').style.background = lv.color;
-  document.getElementById('prog-left').textContent  = 'Seviye ' + currentLevel + ' — ' + lv.label;
+  document.getElementById('prog-left').textContent  = 'Seviye ' + currentLevel + ' â€” ' + lv.label;
   document.getElementById('prog-right').textContent = levelScore + ' / ' + lv.target;
 }
 
@@ -607,17 +607,17 @@ function setMsg(t) {
   setTimeout(() => { m.textContent = t; m.style.opacity = 1; }, 120);
 }
 
-// ── END SCREENS ───────────────────────────────────────────────────
+// â”€â”€ END SCREENS â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 function showLevelUp() {
   gameActive = false; playLevelUp();
   const lv = getLv(currentLevel);
   document.getElementById('lu-title').textContent = 'Seviye ' + currentLevel + ' Tamam!';
   document.getElementById('lu-sub').textContent   = currentLevel < LEVELS.length
-    ? 'Sıradaki: Seviye ' + (currentLevel + 1) + ' — ' + getLv(currentLevel + 1).label
-    : 'Son seviyeyi de geçtin!';
+    ? 'SÄ±radaki: Seviye ' + (currentLevel + 1) + ' â€” ' + getLv(currentLevel + 1).label
+    : 'Son seviyeyi de geÃ§tin!';
   document.getElementById('lu-score').textContent = score;
-  document.getElementById('lu-stars').textContent = levelScore >= lv.target * 1.5 ? '⭐⭐⭐' : levelScore >= lv.target * 1.2 ? '⭐⭐' : '⭐';
-  document.getElementById('lu-btn').textContent   = currentLevel < LEVELS.length ? 'Seviye ' + (currentLevel + 1) + ' →' : 'Bitiş →';
+  document.getElementById('lu-stars').textContent = levelScore >= lv.target * 1.5 ? 'â­â­â­' : levelScore >= lv.target * 1.2 ? 'â­â­' : 'â­';
+  document.getElementById('lu-btn').textContent   = currentLevel < LEVELS.length ? 'Seviye ' + (currentLevel + 1) + ' â†’' : 'BitiÅŸ â†’';
   showOverlay('levelup-overlay');
 }
 
@@ -634,14 +634,14 @@ function showGameOver() {
   gameActive = false; playGameOver();
   stopCatTimer();
   pauseBgMusic();
-  document.getElementById('go-lv').textContent   = endlessMode ? '♾️ Sonsuz' : currentLevel;
+  document.getElementById('go-lv').textContent   = endlessMode ? 'â™¾ï¸ Sonsuz' : currentLevel;
   document.getElementById('go-sc').textContent   = score;
   document.getElementById('go-best').textContent = bestScore;
-  document.getElementById('go-restart-btn').textContent = endlessMode ? '♾️ Tekrar Oyna' : 'Tekrar Oyna';
+  document.getElementById('go-restart-btn').textContent = endlessMode ? 'â™¾ï¸ Tekrar Oyna' : 'Tekrar Oyna';
   showOverlay('gameover-overlay');
 }
 
-// ── PIECES ────────────────────────────────────────────────────────
+// â”€â”€ PIECES â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 function renderPieces() {
   pieces.forEach((p, i) => {
     const card = document.getElementById('p' + i);
@@ -692,13 +692,13 @@ function newPieces() {
   usedFlags = [false, false, false];
   selectedPiece = null;
   renderPieces();
-  setMsg('Bir blok seç, sonra grid üzerine tıkla');
+  setMsg('Bir blok seÃ§, sonra grid Ã¼zerine tÄ±kla');
   if (!anyRemainingCanPlace()) setTimeout(showGameOver, 400);
 }
 
-// ── CAT SPRITE SYSTEM ─────────────────────────────────────────────
+// â”€â”€ CAT SPRITE SYSTEM â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
-// İki shape'in dolu hücrelerini karşılaştırır.
+// Ä°ki shape'in dolu hÃ¼crelerini karÅŸÄ±laÅŸtÄ±rÄ±r.
 function shapesMatch(a, b) {
   if (a.length !== b.length) return false;
   return a.every((row, r) =>
@@ -706,7 +706,7 @@ function shapesMatch(a, b) {
   );
 }
 
-// Yerleştirilen shape için CAT_DEFS içinde eşleşen tanımı döner (yoksa null).
+// YerleÅŸtirilen shape iÃ§in CAT_DEFS iÃ§inde eÅŸleÅŸen tanÄ±mÄ± dÃ¶ner (yoksa null).
 function findCatDef(shape) {
   return CAT_DEFS.find(def => shapesMatch(def.shape, shape)) ?? null;
 }
@@ -720,7 +720,7 @@ function stopCatTimer() {
   if (catAnimTimer) { clearInterval(catAnimTimer); catAnimTimer = null; }
 }
 
-// Her sheet dosyası için { fw, fh } cache'i.
+// Her sheet dosyasÄ± iÃ§in { fw, fh } cache'i.
 const _catSheetCache = {};
 
 function loadCatSheetByDef(def, cb) {
@@ -738,7 +738,7 @@ function loadCatSheetByDef(def, cb) {
     _catSheetCache[key] = { fw, fh };
     cb(fw, fh);
   };
-  img.onerror = () => console.warn('Cat sheet bulunamadı:', key);
+  img.onerror = () => console.warn('Cat sheet bulunamadÄ±:', key);
   img.src = key;
 }
 
@@ -779,7 +779,7 @@ function createCatSprite(row, col, def) {
     const sFH   = blockPxH + earPx;  // exact: sprite_bottom = cellY + blockPxH
 
     // Matematiksel konum: getBoundingClientRect yerine sabit grid metriklerini kullan.
-    // #grid: padding=8px, gap=5px — layout değişse de bu değerler sabit kalır.
+    // #grid: padding=8px, gap=5px â€” layout deÄŸiÅŸse de bu deÄŸerler sabit kalÄ±r.
     const pad  = 8;
     const cellX = pad + col * (s + gap);
     const cellY = pad + row * (s + gap);
@@ -813,7 +813,7 @@ function removeCatSprites(toClear) {
   });
 }
 
-// ── DEBUG / TEST PANEL ────────────────────────────────────────────
+// â”€â”€ DEBUG / TEST PANEL â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 let debugOpen = false;
 
 function toggleDebugPanel() {
@@ -831,7 +831,7 @@ function buildDebugPanel() {
   SHAPES.forEach((shape, i) => {
     const card = document.createElement('div');
     card.className = 'debug-card';
-    card.title = 'Şekil ' + (i + 1);
+    card.title = 'Åekil ' + (i + 1);
     const cols  = Math.max(...shape.map(r => r.length));
     const inner = document.createElement('div');
     inner.style.cssText = `display:grid;grid-template-columns:repeat(${cols},14px);gap:2px;`;
@@ -850,16 +850,16 @@ function buildDebugPanel() {
 }
 
 function debugPickShape(i) {
-  if (!gameActive) { setMsg('Önce oyunu başlat!'); return; }
+  if (!gameActive) { setMsg('Ã–nce oyunu baÅŸlat!'); return; }
   pieces[0]    = { shape: SHAPES[i], color: randColor() };
   usedFlags[0] = false;
   selectedPiece = null;
   renderPieces();
   selectPiece(0);
-  setMsg('Test bloğu slot 0\'a eklendi — yerleştir!');
+  setMsg('Test bloÄŸu slot 0\'a eklendi â€” yerleÅŸtir!');
 }
 
-// ── DRAG & DROP ───────────────────────────────────────────────────
+// â”€â”€ DRAG & DROP â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 let dragState = null; // { idx, shape, ghostEl, isTouch }
 
 function startDrag(idx, clientX, clientY, isTouch) {
@@ -993,7 +993,7 @@ function initDragHandlers() {
   document.addEventListener('touchcancel', cancelDrag);
 }
 
-// ── RESIZE / ORIENTATION CHANGE ───────────────────────────────────
+// â”€â”€ RESIZE / ORIENTATION CHANGE â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 function repositionCatSprites() {
   const snapshot = catSprites.splice(0);
   snapshot.forEach(s => { s.el.remove(); createCatSprite(s.r, s.c, s.def); });
@@ -1005,7 +1005,7 @@ window.addEventListener('resize', () => {
   _resizeTimer = setTimeout(() => {
     if (!gameActive) return;
     const newSize = cs();
-    if (newSize === _lastCellSize) return; // boyut değişmediyse yeniden çizme
+    if (newSize === _lastCellSize) return; // boyut deÄŸiÅŸmediyse yeniden Ã§izme
     _lastCellSize = newSize;
     buildGrid(COLS, ROWS);
     renderGrid();
@@ -1013,5 +1013,6 @@ window.addEventListener('resize', () => {
   }, 150);
 });
 
-// ── BOOTSTRAP ─────────────────────────────────────────────────────
+// â”€â”€ BOOTSTRAP â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 init();
+
