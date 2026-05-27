@@ -66,6 +66,12 @@ const CAT_DEFS = [
     frames: 6, fpr: 6, fps: 10,
     earBodyY: 18,
   },
+  {
+    shape: [[1,1,1]],
+    sheet: 'sprites/3x1 Horizontal Block Cat.png',
+    frames: 5, fpr: 5, fps: 10,
+    earBodyY: 18,
+  },
   // ── Buraya yeni tanımlar ekle ──────────────────────────────────
   // { shape: [[1,0],[1,1],[1,0]], sheet: 'tShape.png', frames: 4, fpr: 4, fps: 8, earBodyY: 18 },
 ];
