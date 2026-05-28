@@ -819,6 +819,7 @@
       <img id="top-logo" src="images/Logo Horizontal.png" alt="Cat Blast" />
       <div style="display:flex;gap:6px;align-items:center">
         <button id="debug-btn" class="secondary" onclick="toggleDebugPanel()" title="Test Paneli">🔧</button>
+        <button id="log-btn" class="secondary" onclick="toggleDebugLog()" title="Log Paneli">📋</button>
         <button id="undo-btn" onclick="applyUndo()" data-tooltip="">
           <span style="font-size:14px">↩</span>
           <span class="pw-charges" style="position:absolute;top:-6px;right:-6px;background:#f0b84c;color:#5a3800;border-radius:999px;width:16px;height:16px;font-size:7px;display:flex;align-items:center;justify-content:center;font-family:'Press Start 2P',monospace;">2</span>
@@ -1097,5 +1098,20 @@
       }, 1800);
     })();
   </script>
+
+  <!-- ── DEBUG LOG PANEL ─────────────────────────────────────── -->
+  <div id="debug-log-panel" style="display:none;position:fixed;bottom:0;left:0;right:0;height:45vh;background:#111;border-top:2px solid #f80;flex-direction:column;z-index:9999;font-family:monospace;">
+    <div style="display:flex;align-items:center;justify-content:space-between;padding:4px 8px;background:#222;border-bottom:1px solid #444;">
+      <span style="color:#f80;font-size:11px;font-weight:bold">🐱 CAT BLAST DEBUG LOG</span>
+      <div style="display:flex;gap:6px">
+        <button onclick="exportDebugLog()" style="font-size:10px;padding:2px 8px;background:#f80;border:none;border-radius:3px;cursor:pointer;color:#000">💾 Export</button>
+        <button onclick="_debugLog.length=0;_renderDebugLog()" style="font-size:10px;padding:2px 8px;background:#555;border:none;border-radius:3px;cursor:pointer;color:#fff">🗑 Clear</button>
+        <button onclick="toggleDebugLog()" style="font-size:10px;padding:2px 8px;background:#555;border:none;border-radius:3px;cursor:pointer;color:#fff">✕ Kapat</button>
+      </div>
+    </div>
+    <div id="debug-log-list" style="flex:1;overflow-y:auto;padding:4px 8px;"></div>
+  </div>
+
+
 </body>
 </html>

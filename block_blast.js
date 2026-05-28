@@ -279,6 +279,51 @@ function applyLang() {
   if (gameActive) updateProgress();
 }
 
+// ── DEBUG LOG SYSTEM ──────────────────────────────────────────────
+const _debugLog = [];
+const _DEBUG_MAX = 300;
+let _debugVisible = false;
+
+function glog(type, msg, extra) {
+  const ts = new Date().toISOString().slice(11, 23);
+  const entry = { ts, type, msg, extra: extra ? JSON.stringify(extra) : '' };
+  _debugLog.push(entry);
+  if (_debugLog.length > _DEBUG_MAX) _debugLog.shift();
+  console.log(`[${type}] ${msg}`, extra || '');
+  _renderDebugLog();
+}
+
+function _renderDebugLog() {
+  const panel = document.getElementById('debug-log-panel');
+  if (!panel || !_debugVisible) return;
+  const list = document.getElementById('debug-log-list');
+  if (!list) return;
+  list.innerHTML = _debugLog.slice().reverse().map(e => {
+    const color = e.type === 'FAIL' ? '#f88' : e.type === 'SPLIT' ? '#fc8' : e.type === 'PLACE' ? '#8f8' : '#adf';
+    return `<div style="color:${color};font-size:10px;border-bottom:1px solid #333;padding:2px 0">
+      <span style="opacity:.6">${e.ts}</span> <b>[${e.type}]</b> ${e.msg}
+      ${e.extra ? `<div style="opacity:.7;font-size:9px;word-break:break-all">${e.extra}</div>` : ''}
+    </div>`;
+  }).join('');
+}
+
+function toggleDebugLog() {
+  _debugVisible = !_debugVisible;
+  const panel = document.getElementById('debug-log-panel');
+  if (panel) panel.style.display = _debugVisible ? 'flex' : 'none';
+  if (_debugVisible) _renderDebugLog();
+}
+
+function exportDebugLog() {
+  const txt = _debugLog.map(e => `[${e.ts}][${e.type}] ${e.msg} ${e.extra}`).join('\n');
+  try { localStorage.setItem('catblast_debug', txt); } catch(e) {}
+  const blob = new Blob([txt], { type: 'text/plain' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url; a.download = 'catblast_debug.txt'; a.click();
+  URL.revokeObjectURL(url);
+}
+
 // ── STATE ─────────────────────────────────────────────────────────
 let board, obstacles, score, levelScore, bestScore, currentLevel, COLS, ROWS;
 let pieces, selectedPiece, usedFlags;
@@ -830,7 +875,19 @@ function placeOnGrid(row, col) {
   if (usedFlags[selectedPiece]) return;
   const p = pieces[selectedPiece];
   const { r, c } = adjustedAnchor(p.shape, row, col);
-  if (!canPlace(p.shape, r, c)) { setMsg(T('msgNoFit')); return; }
+  if (!canPlace(p.shape, r, c)) {
+    setMsg(T('msgNoFit'));
+    const blocked = [];
+    p.shape.forEach((rr, dy) => rr.forEach((v, dx) => {
+      if (!v) return;
+      const nr = r + dy, nc = c + dx;
+      if (nr >= ROWS || nc >= COLS || nr < 0 || nc < 0) { blocked.push(`(${nr},${nc})OOB`); return; }
+      if (board[nr][nc]) blocked.push(`(${nr},${nc})filled:${board[nr][nc].slice(0,8)}`);
+      else if (obstacles.has(nr * COLS + nc)) blocked.push(`(${nr},${nc})obstacle`);
+    }));
+    glog('FAIL', `click(${row},${col}) anchor(${r},${c}) shape${JSON.stringify(p.shape)}`, { blocked });
+    return;
+  }
   saveUndoState();
   playPlace(); haptic(12);
 
@@ -840,6 +897,7 @@ function placeOnGrid(row, col) {
     board[r + dy][c + dx] = p.color;
     placed.push({ r: r + dy, c: c + dx });
   }));
+  glog('PLACE', `anchor(${r},${c}) cells:${placed.map(x=>`(${x.r},${x.c})`).join('')}`, { shape: p.shape, color: p.color.slice(0,8) });
 
   // Register group so all cells hover together
   const gIdx = placedGroups.length;
@@ -1163,7 +1221,6 @@ function createCatSprite(row, col, def) {
 }
 
 function removeCatSprites(toClear) {
-  const orphanedIdxs = [];
   catSprites = catSprites.filter(({ r, c, el, def }) => {
     const occupied = [];
     def.shape.forEach((row, dr) => row.forEach((v, dc) => {
@@ -1171,59 +1228,11 @@ function removeCatSprites(toClear) {
     }));
     if (!occupied.some(i => toClear.has(i))) return true;
     el.remove();
-    occupied.filter(i => !toClear.has(i)).forEach(i => orphanedIdxs.push(i));
+    const survivors = occupied.filter(i => !toClear.has(i));
+    if (survivors.length) {
+      glog('SPLIT', `sprite@(${r},${c}) shape${JSON.stringify(def.shape)} cleared:${[...toClear].filter(i=>occupied.includes(i)).map(i=>`(${Math.floor(i/COLS)},${i%COLS})`).join('')} orphans:${survivors.map(i=>`(${Math.floor(i/COLS)},${i%COLS})`).join('')} → plain blocks`);
+    }
     return false;
-  });
-  if (!orphanedIdxs.length) return;
-
-  // Deduplicate ve board'da hâlâ dolu olanları al
-  const seen = new Set();
-  const cells = [];
-  orphanedIdxs.forEach(idx => {
-    if (seen.has(idx)) return;
-    seen.add(idx);
-    const r = Math.floor(idx / COLS), c = idx % COLS;
-    if (board[r][c] && board[r][c] !== '__obstacle__' && board[r][c] !== '__stone__')
-      cells.push({ r, c });
-  });
-  if (!cells.length) return;
-
-  // Bağlı grupları bul (yatay/dikey komşuluk)
-  const cellMap = new Map(cells.map(({ r, c }) => [r * COLS + c, { r, c }]));
-  const visited = new Set();
-  cells.forEach(({ r, c }) => {
-    const key = r * COLS + c;
-    if (visited.has(key)) return;
-    // BFS
-    const group = [];
-    const queue = [{ r, c }];
-    visited.add(key);
-    while (queue.length) {
-      const { r: cr, c: cc } = queue.shift();
-      group.push({ r: cr, c: cc });
-      [[cr - 1, cc], [cr + 1, cc], [cr, cc - 1], [cr, cc + 1]].forEach(([nr, nc]) => {
-        const nk = nr * COLS + nc;
-        if (!visited.has(nk) && cellMap.has(nk)) { visited.add(nk); queue.push({ r: nr, c: nc }); }
-      });
-    }
-    // Grubun şeklini normalize et
-    const minR = Math.min(...group.map(x => x.r));
-    const minC = Math.min(...group.map(x => x.c));
-    const maxR = Math.max(...group.map(x => x.r));
-    const maxC = Math.max(...group.map(x => x.c));
-    const shape = Array.from({ length: maxR - minR + 1 }, () => Array(maxC - minC + 1).fill(0));
-    group.forEach(({ r, c }) => { shape[r - minR][c - minC] = 1; });
-    const catDef = findCatDef(shape);
-    if (catDef) {
-      createCatSprite(minR, minC, catDef);
-    } else {
-      // Eşleşen şekil yok → elimizde kedi varsa 1x1 kedi, yoksa normal renkli blok
-      const handDefs = getHandCatDefs();
-      if (handDefs.length > 0) {
-        const cat1x1 = findCatDef([[1]]);
-        if (cat1x1) group.forEach(({ r, c }) => createCatSprite(r, c, cat1x1));
-      }
-    }
   });
 }
 
