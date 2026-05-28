@@ -357,6 +357,18 @@ function getACtx() {
   if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
   return audioCtx;
 }
+const _comboAudios = {};
+function _getComboAudio(name) {
+  if (!_comboAudios[name]) {
+    const a = new Audio(`Sounds/${name}.m4a`);
+    a.load();
+    _comboAudios[name] = a;
+  }
+  return _comboAudios[name];
+}
+function preloadComboSounds() {
+  ['firstcombo', 'secondcombo', 'thirdcombo'].forEach(n => _getComboAudio(n));
+}
 function beep(f, d, t = 'sine', v = 0.09) {
   if (!sfxOn) return;
   try {
@@ -373,7 +385,16 @@ function beep(f, d, t = 'sine', v = 0.09) {
 function playSelect()    { beep(520, 0.08, 'sine', 0.1); }
 function playPlace()     { beep(300, 0.07, 'sine', 0.1); setTimeout(() => beep(400, 0.09, 'sine', 0.08), 65); }
 function playLineClear(n){ [440,554,659,880].slice(0,n+1).forEach((f,i) => setTimeout(() => beep(f, 0.18, 'sine', 0.13), i*85)); }
-function playCombo()     { [523,659,784,1046,1318].forEach((f,i) => setTimeout(() => beep(f, 0.14, 'sine', 0.15), i*55)); }
+function playCombo(n = 2) {
+  if (!sfxOn) return;
+  const file = n >= 4 ? 'thirdcombo' : n === 3 ? 'secondcombo' : 'firstcombo';
+  const snd = _getComboAudio(file);
+  snd.volume = sfxVolume;
+  snd.currentTime = 0;
+  snd.play().catch(() => {
+    [523,659,784,1046,1318].forEach((f,i) => setTimeout(() => beep(f, 0.14, 'sine', 0.15), i*55));
+  });
+}
 function playGameOver()  {
   if (sfxOn) {
     const snd = new Audio('Sounds/gameoversound.wav');
@@ -511,7 +532,7 @@ function startEndless() {
 
 function startGame(lvNum, endless = false) {
   endlessMode = !!endless;
-  playClick(); hideAll();
+  playClick(); hideAll(); preloadComboSounds();
   const loading = document.getElementById('level-loading');
   loading.classList.remove('hidden');
   setTimeout(() => {
@@ -862,7 +883,7 @@ function placeOnGrid(row, col) {
     if (cleared > 0) {
       playLineClear(cleared); animateClears(toClear);
       haptic(cleared >= 3 ? [20, 8, 20, 8, 50] : [20, 10, 30]);
-      if (cleared >= 2) setTimeout(() => { playCombo(); showCombo(cleared); haptic([15, 8, 15, 8, 55]); }, 360);
+      if (cleared >= 2) { playCombo(cleared); setTimeout(() => { showCombo(cleared); haptic([15, 8, 15, 8, 55]); }, 360); }
     }
     if (!endlessMode && levelScore >= getLv(currentLevel).target) { setTimeout(showLevelUp, cleared > 0 ? 500 : 250); return; }
     const allUsed = usedFlags.every(Boolean);
