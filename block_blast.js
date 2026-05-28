@@ -255,7 +255,10 @@ function T(key, vars) {
   if (vars) Object.keys(vars).forEach(k => { s = s.replace(new RegExp('\\{' + k + '\\}', 'g'), vars[k]); });
   return s;
 }
-function getLevelName(n) { return (LEVEL_NAMES[currentLang] || LEVEL_NAMES.tr)[n - 1] || ''; }
+function getLevelName(n) {
+  const names = LEVEL_NAMES[currentLang] || LEVEL_NAMES.tr;
+  return names[n - 1] || names[names.length - 1];
+}
 function setLang(lang) {
   currentLang = lang;
   try { localStorage.setItem('bb_lang', lang); } catch(e) {}
@@ -326,6 +329,7 @@ function exportDebugLog() {
 
 // ── STATE ─────────────────────────────────────────────────────────
 let board, obstacles, score, levelScore, bestScore, currentLevel, COLS, ROWS;
+let bestScores = { level: 0, endless: 0, timer: 0 };
 let pieces, selectedPiece, usedFlags;
 let _easterClicks = 0, _easterTimer = null;
 let placedGroups = [], cellToGroup = {}; // group hover tracking
@@ -342,17 +346,39 @@ let undoCharges = 0, _savedState = null;
 let hintActive = false;
 let timerMode = false, timerSeconds = 0, _timerInterval = null;
 let stoneSpawnCounter = 0;
-let scoreHistory = [];
+let scoreHistory = { level: [], endless: [], timer: [] };
 let gameStats = { games: 0, linesCleared: 0, totalPlacements: 0 };
 const PW_MAX = 3, PW_THRESHOLD = 300;
 
-try { bestScore = parseInt(localStorage.getItem('bb_lv2_best') || '0'); }
-catch(e) { bestScore = 0; }
+try {
+  const _bs = JSON.parse(localStorage.getItem('bb_best_scores') || 'null');
+  if (_bs && typeof _bs.level === 'number') {
+    bestScores = _bs;
+  } else {
+    const _old = parseInt(localStorage.getItem('bb_lv2_best') || '0');
+    if (_old > 0) bestScores.level = _old;
+  }
+} catch(e) {}
+bestScore = 0;
 try { darkMode = localStorage.getItem('bb_dark') === '1'; }
 catch(e) {}
 try { const v = parseFloat(localStorage.getItem('bb_vol'));     musicVolume = (isFinite(v) && v > 0) ? v : 0.7; } catch(e) {}
 try { const v = parseFloat(localStorage.getItem('bb_sfx_vol')); sfxVolume   = (isFinite(v) && v > 0) ? v : 0.7; } catch(e) {}
-try { scoreHistory = JSON.parse(localStorage.getItem('bb_scores') || '[]'); } catch(e) { scoreHistory = []; }
+try {
+  const _raw = JSON.parse(localStorage.getItem('bb_scores') || 'null');
+  if (_raw && !Array.isArray(_raw) && _raw.level !== undefined) {
+    scoreHistory = _raw; // yeni format
+  } else if (Array.isArray(_raw)) {
+    // eski format → migrate
+    scoreHistory = { level: [], endless: [], timer: [] };
+    _raw.forEach(e => {
+      const m = e.level === '⏱' ? 'timer' : e.level === '∞' ? 'endless' : 'level';
+      scoreHistory[m].push({ score: e.score, lv: (m === 'level' ? e.level : null), date: e.date });
+    });
+  } else {
+    scoreHistory = { level: [], endless: [], timer: [] };
+  }
+} catch(e) { scoreHistory = { level: [], endless: [], timer: [] }; }
 try { gameStats = Object.assign({ games: 0, linesCleared: 0, totalPlacements: 0 }, JSON.parse(localStorage.getItem('bb_stats') || '{}')); } catch(e) {}
 
 // ── INIT (called on page load) ────────────────────────────────────
@@ -360,11 +386,8 @@ function init() {
   applyDark();
   applyLang();
   syncVolumeSliders();
-  if (bestScore > 0) {
-    document.getElementById('start-best').style.display = 'inline-block';
-    document.getElementById('start-best-val').textContent = bestScore;
-  }
-  document.getElementById('bv').textContent = bestScore;
+  updatePlayOverlayBests();
+  document.getElementById('bv').textContent = 0;
   buildGrid(7, 7);
   initDragHandlers();
 }
@@ -384,7 +407,25 @@ function easterEggClick() {
 }
 
 // ── HELPERS ───────────────────────────────────────────────────────
-function getLv(n) { return LEVELS[Math.min(n, LEVELS.length) - 1]; }
+function getLv(n) {
+  if (n <= LEVELS.length) return LEVELS[n - 1];
+  // Sonsuz level modu: dinamik üret
+  const obstacles = Math.min(35, 20 + (n - LEVELS.length));
+  const target    = Math.round(400 + (n - 1) * (200 + 50 * n));
+  const color     = COLORS[(n - 1) % COLORS.length];
+  return { n, grid: 9, obstacles, target, color, label: `Uzman+`, desc: `9×9 grid, ${obstacles} engel.` };
+}
+function currentModeKey() { return timerMode ? 'timer' : endlessMode ? 'endless' : 'level'; }
+function updatePlayOverlayBests() {
+  const map = { level: 'best-level', endless: 'best-endless', timer: 'best-timer' };
+  Object.entries(map).forEach(([mode, id]) => {
+    const el = document.getElementById(id);
+    if (el) el.textContent = bestScores[mode] > 0 ? bestScores[mode] : '—';
+  });
+}
+function saveBestScore() {
+  try { localStorage.setItem('bb_best_scores', JSON.stringify(bestScores)); } catch(e) {}
+}
 function randShape() { return SHAPES[Math.floor(Math.random() * SHAPES.length)]; }
 function randColor() { return COLORS[Math.floor(Math.random() * COLORS.length)]; }
 function newPiece() { return { shape: randShape(), color: randColor() }; }
@@ -601,6 +642,7 @@ function _initLevel(lvNum) {
   placedGroups = []; cellToGroup = {};
   if (lvNum === 1) { score = 0; clawCharges = 0; gazeCharges = 0; bombCharges = 0; undoCharges = 2; _savedState = null; }
   levelScore = 0;
+  bestScore = bestScores[currentModeKey()];
   clawActive = false; gazeActive = false; bombActive = false; hintActive = false;
   stoneSpawnCounter = 0;
   stopTimer();
@@ -646,7 +688,6 @@ function placeObstacles(count) {
 function goNextLevel() {
   playClick(); hideAll();
   currentLevel++;
-  if (currentLevel > LEVELS.length) { showVictory(); return; }
   _initLevel(currentLevel);
 }
 
@@ -669,10 +710,7 @@ function quitToMenu() {
   document.getElementById('powerup-bar').classList.add('hidden');
   playBgMusic();
   stopCatTimer(); clearAllCats();
-  if (bestScore > 0) {
-    document.getElementById('start-best').style.display = 'inline-block';
-    document.getElementById('start-best-val').textContent = bestScore;
-  }
+  updatePlayOverlayBests();
   showOverlay('main-menu-overlay');
 }
 
@@ -930,7 +968,7 @@ function placeOnGrid(row, col) {
     score += pts; levelScore += pts;
     if (score > bestScore) {
       bestScore = score;
-      try { localStorage.setItem('bb_lv2_best', bestScore); } catch(e) {}
+      bestScores[currentModeKey()] = bestScore; saveBestScore();
     }
     updateScoreUI(); updateProgress();
     checkAndGrantCharges(oldScore, score);
@@ -1011,12 +1049,10 @@ function showLevelUp() {
   gameActive = false; playLevelUp(); haptic([15, 8, 15, 8, 60]);
   const lv = getLv(currentLevel);
   document.getElementById('lu-title').textContent = T('luTitle', { n: currentLevel });
-  document.getElementById('lu-sub').textContent   = currentLevel < LEVELS.length
-    ? T('luNext', { n: currentLevel + 1, label: getLevelName(currentLevel + 1) })
-    : T('luLast');
+  document.getElementById('lu-sub').textContent   = T('luNext', { n: currentLevel + 1, label: getLevelName(currentLevel + 1) });
   document.getElementById('lu-score').textContent = score;
   document.getElementById('lu-stars').textContent = levelScore >= lv.target * 1.5 ? '⭐⭐⭐' : levelScore >= lv.target * 1.2 ? '⭐⭐' : '⭐';
-  document.getElementById('lu-btn').textContent   = currentLevel < LEVELS.length ? T('btnNextLevel', { n: currentLevel + 1 }) : T('btnFinish');
+  document.getElementById('lu-btn').textContent   = T('btnNextLevel', { n: currentLevel + 1 });
   showOverlay('levelup-overlay');
 }
 
@@ -1328,7 +1364,7 @@ function applyClaw(row, col) {
   const pts = 5;
   const oldScore = score;
   score += pts; levelScore += pts;
-  if (score > bestScore) { bestScore = score; try { localStorage.setItem('bb_lv2_best', bestScore); } catch(e) {} }
+  if (score > bestScore) { bestScore = score; bestScores[currentModeKey()] = bestScore; saveBestScore(); }
   updateScoreUI(); updateProgress();
   checkAndGrantCharges(oldScore, score);
   showScoreFly(pts, row, col);
@@ -1451,7 +1487,7 @@ function applyBomb(row, col) {
   const pts = toClear.size * 8;
   const oldScore = score;
   score += pts; levelScore += pts;
-  if (score > bestScore) { bestScore = score; try { localStorage.setItem('bb_lv2_best', bestScore); } catch(e) {} }
+  if (score > bestScore) { bestScore = score; bestScores[currentModeKey()] = bestScore; saveBestScore(); }
   updateScoreUI(); updateProgress();
   checkAndGrantCharges(oldScore, score);
   if (pts > 0) showScoreFly(pts, row, col);
@@ -1587,29 +1623,44 @@ function saveScoreHistory() {
   gameStats.games++;
   try { localStorage.setItem('bb_stats', JSON.stringify(gameStats)); } catch(e) {}
   if (score <= 0) return;
-  const levelLabel = timerMode ? '⏱' : (endlessMode ? '∞' : currentLevel);
-  scoreHistory.push({ score, level: levelLabel, date: new Date().toLocaleDateString('tr-TR') });
-  scoreHistory.sort((a, b) => b.score - a.score);
-  scoreHistory = scoreHistory.slice(0, 5);
+  const mode = timerMode ? 'timer' : endlessMode ? 'endless' : 'level';
+  const entry = { score, lv: mode === 'level' ? currentLevel : null, date: new Date().toLocaleDateString('tr-TR') };
+  scoreHistory[mode].push(entry);
+  scoreHistory[mode].sort((a, b) => b.score - a.score);
+  scoreHistory[mode] = scoreHistory[mode].slice(0, 5);
   try { localStorage.setItem('bb_scores', JSON.stringify(scoreHistory)); } catch(e) {}
   renderTopScores();
 }
 
+function _buildScoreSection(mode, entries, label) {
+  const wrap = document.createElement('div');
+  wrap.style.marginBottom = '10px';
+  if (!entries.length) {
+    const empty = document.createElement('div');
+    empty.style.cssText = 'opacity:.4;font-size:8px;text-align:center;padding:4px';
+    empty.textContent = T('noScores');
+    wrap.appendChild(empty);
+  } else {
+    entries.forEach((e, i) => {
+      const row = document.createElement('div');
+      row.className = 'score-list-row';
+      row.innerHTML = mode === 'level'
+        ? `<span>#${i+1}</span><span>${e.score}</span><span>Lv${e.lv}</span><span>${e.date}</span>`
+        : `<span>#${i+1}</span><span>${e.score}</span><span>${label}</span><span>${e.date}</span>`;
+      wrap.appendChild(row);
+    });
+  }
+  return wrap;
+}
+
 function renderTopScores() {
+  const mode = timerMode ? 'timer' : endlessMode ? 'endless' : 'level';
+  const label = mode === 'timer' ? '⏱ Süre' : mode === 'endless' ? '♾️ Sonsuz' : '🎯 Level';
   ['go-score-list', 'vic-score-list'].forEach(id => {
     const list = document.getElementById(id);
     if (!list) return;
     list.innerHTML = '';
-    if (scoreHistory.length === 0) {
-      list.innerHTML = `<div style="opacity:.5;font-size:8px;text-align:center;padding:6px">${T('noScores')}</div>`;
-      return;
-    }
-    scoreHistory.forEach((entry, i) => {
-      const row = document.createElement('div');
-      row.className = 'score-list-row';
-      row.innerHTML = `<span>#${i + 1}</span><span>${entry.score}</span><span>Lv${entry.level}</span><span>${entry.date}</span>`;
-      list.appendChild(row);
-    });
+    list.appendChild(_buildScoreSection(mode, scoreHistory[mode], label));
   });
 }
 
@@ -1618,22 +1669,20 @@ function showStats() {
   document.getElementById('stat-games').textContent       = gameStats.games;
   document.getElementById('stat-lines').textContent       = gameStats.linesCleared;
   document.getElementById('stat-placements').textContent  = gameStats.totalPlacements;
-  document.getElementById('stat-best').textContent        = bestScore;
-  const list = document.getElementById('stats-score-list');
-  if (list) {
-    list.innerHTML = '';
-    if (scoreHistory.length === 0) {
-      list.innerHTML = `<div style="opacity:.5;font-size:8px;text-align:center;padding:8px">${T('noScores')}</div>`;
-    } else {
-      scoreHistory.forEach((entry, i) => {
-        const row = document.createElement('div');
-        row.className = 'score-list-row';
-        row.innerHTML = `<span>#${i + 1}</span><span>${entry.score}</span><span>Lv${entry.level}</span><span>${entry.date}</span>`;
-        list.appendChild(row);
-      });
-    }
-  }
+  document.getElementById('stat-best').textContent        = Math.max(bestScores.level, bestScores.endless, bestScores.timer);
   showOverlay('stats-overlay');
+  switchScoreTab('level');
+}
+
+function switchScoreTab(mode) {
+  const labels = { level: '🎯 Level Modu', endless: '♾️ Sonsuz Mod', timer: '⏱ Süre Modu' };
+  document.querySelectorAll('.score-tab').forEach(btn => btn.classList.remove('active'));
+  const activeBtn = document.getElementById('stab-' + mode);
+  if (activeBtn) activeBtn.classList.add('active');
+  const list = document.getElementById('stats-score-list');
+  if (!list) return;
+  list.innerHTML = '';
+  list.appendChild(_buildScoreSection(mode, scoreHistory[mode], labels[mode]));
 }
 
 function startTimerGame() {

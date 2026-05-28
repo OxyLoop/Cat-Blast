@@ -253,6 +253,14 @@
     }
     .endless-btn { background: #7c5cbf; }
     body.dark .endless-btn { background: #9b7dd4; }
+    .mode-best-badge {
+      font-size: 8px;
+      min-width: 52px;
+      text-align: right;
+      opacity: .75;
+      white-space: nowrap;
+      padding-left: 8px;
+    }
     .vol-slider-music, .vol-slider-sfx { }
     .vol-slider, .vol-slider-music, .vol-slider-sfx {
       -webkit-appearance: none;
@@ -361,6 +369,26 @@
     #timer-display { font-size:17px; display:block; margin-top:6px; }
     #timer-display.timer-danger { color:#ffe0d0; animation: timer-blink .5s ease infinite alternate; }
     @keyframes timer-blink { from {opacity:1} to {opacity:.4} }
+
+    /* ── SKOR SEKMELERİ ── */
+    .score-tab {
+      flex: 1;
+      font-size: 7px;
+      padding: 6px 2px;
+      background: rgba(0,0,0,.06);
+      border: 2px solid transparent;
+      border-radius: 8px;
+      cursor: pointer;
+      opacity: .55;
+      transition: opacity .15s, border-color .15s;
+    }
+    .score-tab.active {
+      opacity: 1;
+      border-color: currentColor;
+      background: rgba(0,0,0,.12);
+    }
+    body.dark .score-tab { background: rgba(255,255,255,.07); }
+    body.dark .score-tab.active { background: rgba(255,255,255,.14); }
 
     /* ── SKOR LİSTESİ ── */
     .score-list-row {
@@ -976,11 +1004,19 @@
   <!-- Oyna Menüsü -->
   <section id="play-overlay" class="menu-screen hidden">
     <div class="modal" style="text-align:center">
-      <div id="start-best" class="best-badge" style="display:none">🏆 En İyi: <b id="start-best-val">0</b></div>
       <div class="menu-btn-group">
-        <button class="start-play-btn" onclick="startGame(1)" data-i18n="btnLevelMode">Level Modu</button>
-        <button class="start-play-btn endless-btn" onclick="startEndless()" data-i18n="btnEndless">♾️ Sonsuz Mod</button>
-        <button class="start-play-btn" onclick="startTimerGame()" style="background:#d4593c" data-i18n="btnTimerMode">⏱ Süre Modu</button>
+        <div style="display:flex;align-items:center;justify-content:space-between;width:100%">
+          <button class="start-play-btn" style="flex:1" onclick="startGame(1)" data-i18n="btnLevelMode">Level Modu</button>
+          <span class="mode-best-badge">🏆 <b id="best-level">—</b></span>
+        </div>
+        <div style="display:flex;align-items:center;justify-content:space-between;width:100%">
+          <button class="start-play-btn endless-btn" style="flex:1" onclick="startEndless()" data-i18n="btnEndless">♾️ Sonsuz Mod</button>
+          <span class="mode-best-badge">🏆 <b id="best-endless">—</b></span>
+        </div>
+        <div style="display:flex;align-items:center;justify-content:space-between;width:100%">
+          <button class="start-play-btn" style="flex:1;background:#d4593c" onclick="startTimerGame()" data-i18n="btnTimerMode">⏱ Süre Modu</button>
+          <span class="mode-best-badge">🏆 <b id="best-timer">—</b></span>
+        </div>
         <button class="start-play-btn secondary back-btn" onclick="showMainMenu()" data-i18n="btnBack">← Geri</button>
       </div>
     </div>
@@ -1065,6 +1101,11 @@
         <div class="card" style="min-width:0"><span data-i18n="statBestScore" style="font-size:7px">Rekor</span><b id="stat-best">0</b></div>
       </div>
       <div style="font-size:7px;opacity:.55;margin-bottom:8px;text-align:left" data-i18n="topScores">Yüksek Skorlar</div>
+      <div id="score-tabs" style="display:flex;gap:4px;margin-bottom:10px">
+        <button id="stab-level"   class="score-tab active" onclick="switchScoreTab('level')">🎯 Level</button>
+        <button id="stab-endless" class="score-tab"        onclick="switchScoreTab('endless')">♾️ Sonsuz</button>
+        <button id="stab-timer"   class="score-tab"        onclick="switchScoreTab('timer')">⏱ Süre</button>
+      </div>
       <div id="stats-score-list" style="margin-bottom:16px"></div>
       <button class="start-play-btn secondary back-btn" onclick="showMainMenu()" data-i18n="btnBack">← Geri</button>
     </div>
@@ -1105,7 +1146,8 @@
       <span style="color:#f80;font-size:11px;font-weight:bold">🐱 CAT BLAST DEBUG LOG</span>
       <div style="display:flex;gap:6px">
         <button onclick="exportDebugLog()" style="font-size:10px;padding:2px 8px;background:#f80;border:none;border-radius:3px;cursor:pointer;color:#000">💾 Export</button>
-        <button onclick="_debugLog.length=0;_renderDebugLog()" style="font-size:10px;padding:2px 8px;background:#555;border:none;border-radius:3px;cursor:pointer;color:#fff">🗑 Clear</button>
+        <button onclick="_debugLog.length=0;_renderDebugLog()" style="font-size:10px;padding:2px 8px;background:#555;border:none;border-radius:3px;cursor:pointer;color:#fff">🗑 Log Sil</button>
+        <button onclick="['bb_scores','bb_best_scores','bb_lv2_best'].forEach(k=>localStorage.removeItem(k));location.reload()" style="font-size:10px;padding:2px 8px;background:#c33;border:none;border-radius:3px;cursor:pointer;color:#fff">🗑 Skor Sil</button>
         <button onclick="toggleDebugLog()" style="font-size:10px;padding:2px 8px;background:#555;border:none;border-radius:3px;cursor:pointer;color:#fff">✕ Kapat</button>
       </div>
     </div>
