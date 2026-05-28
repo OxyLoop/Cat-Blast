@@ -252,7 +252,8 @@
     }
     .endless-btn { background: #7c5cbf; }
     body.dark .endless-btn { background: #9b7dd4; }
-    .vol-slider {
+    .vol-slider-music, .vol-slider-sfx { }
+    .vol-slider, .vol-slider-music, .vol-slider-sfx {
       -webkit-appearance: none;
       width: 80px;
       height: 4px;
@@ -262,7 +263,7 @@
       cursor: pointer;
       vertical-align: middle;
     }
-    .vol-slider::-webkit-slider-thumb {
+    .vol-slider::-webkit-slider-thumb, .vol-slider-music::-webkit-slider-thumb, .vol-slider-sfx::-webkit-slider-thumb {
       -webkit-appearance: none;
       width: 16px;
       height: 16px;
@@ -270,7 +271,7 @@
       background: #263238;
       cursor: pointer;
     }
-    .vol-slider::-moz-range-thumb {
+    .vol-slider::-moz-range-thumb, .vol-slider-music::-moz-range-thumb, .vol-slider-sfx::-moz-range-thumb {
       width: 16px;
       height: 16px;
       border-radius: 50%;
@@ -278,9 +279,9 @@
       border: none;
       cursor: pointer;
     }
-    body.dark .vol-slider { background: #3a4a60; }
-    body.dark .vol-slider::-webkit-slider-thumb { background: #9b7dd4; }
-    body.dark .vol-slider::-moz-range-thumb { background: #9b7dd4; }
+    body.dark .vol-slider, body.dark .vol-slider-music, body.dark .vol-slider-sfx { background: #3a4a60; }
+    body.dark .vol-slider::-webkit-slider-thumb, body.dark .vol-slider-music::-webkit-slider-thumb, body.dark .vol-slider-sfx::-webkit-slider-thumb { background: #9b7dd4; }
+    body.dark .vol-slider::-moz-range-thumb, body.dark .vol-slider-music::-moz-range-thumb, body.dark .vol-slider-sfx::-moz-range-thumb { background: #9b7dd4; }
     .vol-row {
       display: flex;
       align-items: center;
@@ -320,6 +321,19 @@
       opacity: 1;
       transform: translateX(-50%) scale(1);
     }
+    /* ── PARTİKEL ── */
+    .particle {
+      position: absolute;
+      pointer-events: none;
+      z-index: 5;
+      transform: translate(-50%, -50%);
+      animation: particle-fly var(--pdur, .48s) ease-out forwards;
+    }
+    @keyframes particle-fly {
+      0%   { transform: translate(-50%,-50%) rotate(0deg) scale(1); opacity: .9; }
+      100% { transform: translate(calc(-50% + var(--pdx)), calc(-50% + var(--pdy))) rotate(var(--prot)) scale(0); opacity: 0; }
+    }
+
     .cat-sprite {
       position: absolute;
       pointer-events: none;
@@ -557,6 +571,106 @@
     .lang-btn.active { opacity: 1; }
     body.dark .lang-btn { background: #3560b8; }
 
+    /* ── POWER-UPS ── */
+    #powerup-bar {
+      display: flex;
+      gap: 10px;
+      justify-content: center;
+      margin: 4px 0 2px;
+    }
+    .powerup-btn {
+      position: relative;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 3px;
+      padding: 7px 16px;
+      border-radius: 14px;
+      font-size: 8px;
+      background: #8a9aaa;
+      color: white;
+      min-width: 86px;
+      opacity: 0.4;
+      transition: opacity .15s, transform .12s, border-color .15s;
+      border: 2px solid transparent;
+      cursor: not-allowed;
+    }
+    .powerup-btn.charged { background: #263238; opacity: 1; cursor: pointer; }
+    .powerup-btn.charged:hover { transform: translateY(-2px); }
+    .powerup-btn.active { border-color: #f0b84c; background: #a06010; opacity: 1; cursor: pointer; }
+    body.dark .powerup-btn.charged { background: #3560b8; }
+    body.dark .powerup-btn.active  { background: #a06010; border-color: #f0b84c; }
+    .pw-icon { font-size: 18px; line-height: 1; }
+    .pw-charges {
+      position: absolute;
+      top: -7px; right: -7px;
+      background: #f0b84c;
+      color: #5a3800;
+      border-radius: 999px;
+      width: 20px; height: 20px;
+      font-size: 9px;
+      display: flex; align-items: center; justify-content: center;
+      font-family: 'Press Start 2P', monospace;
+      box-shadow: 0 2px 6px rgba(0,0,0,.2);
+    }
+    .powerup-btn[data-tooltip]::after {
+      content: attr(data-tooltip);
+      position: absolute;
+      bottom: calc(100% + 8px);
+      left: 50%;
+      transform: translateX(-50%);
+      background: #263238;
+      color: #fff;
+      border-radius: 10px;
+      padding: 7px 12px;
+      font-size: 7px;
+      line-height: 1.9;
+      white-space: pre-line;
+      pointer-events: none;
+      opacity: 0;
+      transition: opacity .2s;
+      z-index: 30;
+      box-shadow: 0 4px 12px rgba(0,0,0,.25);
+      text-align: center;
+    }
+    .powerup-btn.charged[data-tooltip]:hover::after { opacity: 1; }
+    body.dark .powerup-btn[data-tooltip]::after { background: #1a2235; }
+
+    #grid.claw-mode .gcell.filled { cursor: crosshair; }
+    #grid.claw-mode .gcell.filled:hover {
+      outline: 2px solid #ff6b6b;
+      box-shadow: 0 0 0 2px rgba(255,107,107,.35);
+    }
+    .piece-card.gaze-available {
+      border-color: #f0b84c !important;
+      animation: gaze-pulse .9s ease infinite alternate;
+    }
+    @keyframes gaze-pulse {
+      from { box-shadow: 0 8px 18px rgba(0,0,0,.08); }
+      to   { box-shadow: 0 8px 28px rgba(240,184,76,.5); }
+    }
+    #pw-toast {
+      position: absolute;
+      left: 50%; top: 68px;
+      transform: translateX(-50%) scale(.7);
+      opacity: 0;
+      background: #f0b84c;
+      color: #5a3800;
+      border-radius: 999px;
+      padding: 8px 16px;
+      font-family: 'Press Start 2P', monospace;
+      font-size: 9px;
+      z-index: 9;
+      transition: .18s;
+      white-space: nowrap;
+      pointer-events: none;
+    }
+    #pw-toast.show { opacity: 1; transform: translateX(-50%) scale(1); }
+    @media (max-width: 520px) {
+      .powerup-btn { min-width: 72px; padding: 6px 10px; font-size: 7px; }
+      .pw-icon { font-size: 15px; }
+    }
+
     /* ── HAKKIMIZDA ── */
     .about-dev-row {
       display: flex;
@@ -613,7 +727,21 @@
     </div>
     <div class="progress"><div id="progress-bar"></div></div>
 
+    <div id="powerup-bar" class="hidden">
+      <button id="claw-btn" class="powerup-btn" onclick="activateClaw()">
+        <span class="pw-icon">🐾</span>
+        <span data-i18n="pwClawName">Pençe Darbesi</span>
+        <span class="pw-charges" id="claw-charges">0</span>
+      </button>
+      <button id="gaze-btn" class="powerup-btn" onclick="activateGaze()">
+        <span class="pw-icon">👁️</span>
+        <span data-i18n="pwGazeName">Kedi Bakışı</span>
+        <span class="pw-charges" id="gaze-charges">0</span>
+      </button>
+    </div>
+
     <div id="combo-toast"></div>
+    <div id="pw-toast"></div>
     <div id="grid-wrap"><div id="grid"></div></div>
 
     <section class="pieces">
@@ -634,10 +762,17 @@
         <h2 data-i18n="pauseTitle">Duraklatıldı</h2>
         <p id="pause-info" style="font-size:9px;opacity:.7;margin:4px 0 16px">Seviye 1 — Skor 0</p>
         <div class="settings-row">
-          <span data-i18n="labelSound">Ses</span>
+          <span data-i18n="labelMusic">Müzik</span>
           <div style="display:flex;align-items:center;gap:10px">
-            <button id="sound-btn" onclick="toggleSound()" style="width:44px;height:42px;padding:0;font-size:19px">🔊</button>
-            <input type="range" class="vol-slider" id="vol-slider-topbar" min="0" max="100" value="70" oninput="setVolume(this.value)">
+            <button id="music-btn" onclick="toggleMusic()" style="width:44px;height:42px;padding:0;font-size:19px">🎵</button>
+            <input type="range" class="vol-slider vol-slider-music" id="vol-slider-music-topbar" min="0" max="100" value="70" oninput="setMusicVolume(this.value)">
+          </div>
+        </div>
+        <div class="settings-row">
+          <span data-i18n="labelSfx">Efektler</span>
+          <div style="display:flex;align-items:center;gap:10px">
+            <button id="sfx-btn" onclick="toggleSfx()" style="width:44px;height:42px;padding:0;font-size:19px">🔊</button>
+            <input type="range" class="vol-slider vol-slider-sfx" id="vol-slider-sfx-topbar" min="0" max="100" value="70" oninput="setSfxVolume(this.value)">
           </div>
         </div>
         <div class="settings-row">
@@ -718,10 +853,17 @@
     <div class="modal" style="text-align:center">
       <h2 data-i18n="settingsTitle">Ayarlar</h2>
       <div class="settings-row">
-        <span data-i18n="labelSound">Ses</span>
+        <span data-i18n="labelMusic">Müzik</span>
         <div style="display:flex;align-items:center;gap:10px">
-          <button id="sound-btn-menu" onclick="toggleSound()" style="width:44px;height:42px;padding:0;font-size:19px">🔊</button>
-          <input type="range" class="vol-slider" id="vol-slider-menu" min="0" max="100" value="70" oninput="setVolume(this.value)">
+          <button id="music-btn-menu" onclick="toggleMusic()" style="width:44px;height:42px;padding:0;font-size:19px">🎵</button>
+          <input type="range" class="vol-slider vol-slider-music" id="vol-slider-music-menu" min="0" max="100" value="70" oninput="setMusicVolume(this.value)">
+        </div>
+      </div>
+      <div class="settings-row">
+        <span data-i18n="labelSfx">Efektler</span>
+        <div style="display:flex;align-items:center;gap:10px">
+          <button id="sfx-btn-menu" onclick="toggleSfx()" style="width:44px;height:42px;padding:0;font-size:19px">🔊</button>
+          <input type="range" class="vol-slider vol-slider-sfx" id="vol-slider-sfx-menu" min="0" max="100" value="70" oninput="setSfxVolume(this.value)">
         </div>
       </div>
       <div class="settings-row">
