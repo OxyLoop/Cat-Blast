@@ -374,7 +374,15 @@ function playSelect()    { beep(520, 0.08, 'sine', 0.1); }
 function playPlace()     { beep(300, 0.07, 'sine', 0.1); setTimeout(() => beep(400, 0.09, 'sine', 0.08), 65); }
 function playLineClear(n){ [440,554,659,880].slice(0,n+1).forEach((f,i) => setTimeout(() => beep(f, 0.18, 'sine', 0.13), i*85)); }
 function playCombo()     { [523,659,784,1046,1318].forEach((f,i) => setTimeout(() => beep(f, 0.14, 'sine', 0.15), i*55)); }
-function playGameOver()  { [350,280,220,170].forEach((f,i) => setTimeout(() => beep(f, 0.2, 'sine', 0.1), i*130)); }
+function playGameOver()  {
+  if (sfxOn) {
+    const snd = new Audio('Sounds/gameoversound.wav');
+    snd.volume = sfxVolume;
+    snd.play().catch(() => {
+      [350,280,220,170].forEach((f,i) => setTimeout(() => beep(f, 0.2, 'sine', 0.1), i*130));
+    });
+  }
+}
 function playNewPieces() { [370,440,550].forEach((f,i) => setTimeout(() => beep(f, 0.1, 'sine', 0.09), i*70)); }
 function playLevelUp()   { [523,659,784,880,1046].forEach((f,i) => setTimeout(() => beep(f, 0.16, 'sine', 0.14), i*70)); }
 function playVictory()   { [523,659,784,1046,1318,1568].forEach((f,i) => setTimeout(() => beep(f, 0.18, 'sine', 0.15), i*80)); }
@@ -1034,6 +1042,14 @@ function findCatDef(shape) {
   return CAT_DEFS.find(def => shapesMatch(def.shape, shape)) ?? null;
 }
 
+function getHandCatDefs() {
+  if (!pieces || !usedFlags) return [];
+  return pieces
+    .filter((p, i) => p && !usedFlags[i])
+    .map(p => findCatDef(p.shape))
+    .filter(d => d !== null);
+}
+
 function clearAllCats() {
   catSprites.forEach(s => s.el.remove());
   catSprites = [];
@@ -1180,9 +1196,12 @@ function removeCatSprites(toClear) {
     if (catDef) {
       createCatSprite(minR, minC, catDef);
     } else {
-      // Eşleşen şekil yok → her hücreye 1x1 kedi
-      const cat1x1 = findCatDef([[1]]);
-      if (cat1x1) group.forEach(({ r, c }) => createCatSprite(r, c, cat1x1));
+      // Eşleşen şekil yok → elimizde kedi varsa 1x1 kedi, yoksa normal renkli blok
+      const handDefs = getHandCatDefs();
+      if (handDefs.length > 0) {
+        const cat1x1 = findCatDef([[1]]);
+        if (cat1x1) group.forEach(({ r, c }) => createCatSprite(r, c, cat1x1));
+      }
     }
   });
 }
