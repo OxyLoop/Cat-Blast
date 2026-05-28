@@ -159,6 +159,7 @@
     .piece-card.vanish {
       opacity: 0;
       transform: scale(.4);
+      pointer-events: none;
     }
     .pmini {
       display: grid;
@@ -321,6 +322,113 @@
       opacity: 1;
       transform: translateX(-50%) scale(1);
     }
+    /* ── TAS BLOK ── */
+    .gcell.stone-block {
+      background: repeating-linear-gradient(45deg, #8a9aaa, #8a9aaa 5px, #7a8a9a 5px, #7a8a9a 10px) !important;
+      cursor: not-allowed;
+      box-shadow: inset 0 -3px 0 rgba(0,0,0,.2);
+    }
+    body.dark .gcell.stone-block {
+      background: repeating-linear-gradient(45deg, #4a5a6a, #4a5a6a 5px, #3a4a5a 5px, #3a4a5a 10px) !important;
+    }
+
+    /* ── BOMBA MODU ── */
+    #grid.bomb-mode .gcell:not(.obstacle) { cursor: crosshair; }
+    .gcell.bomb-preview {
+      outline: 2px solid #ff8c00 !important;
+      background-color: rgba(255,140,0,.25) !important;
+      box-shadow: inset 0 0 0 1px rgba(255,140,0,.5);
+    }
+    .gcell.bomb-preview.filled {
+      outline: 2px solid #ff4400 !important;
+      background-color: rgba(255,68,0,.35) !important;
+    }
+
+    /* ── IPUCU ── */
+    .gcell.hint-cell {
+      outline: 2px solid rgba(93,142,216,.7) !important;
+      background: rgba(93,142,216,.12) !important;
+      animation: hint-pulse .8s ease infinite alternate;
+    }
+    @keyframes hint-pulse {
+      from { outline-color: rgba(93,142,216,.4); }
+      to   { outline-color: rgba(93,142,216,1); }
+    }
+
+    /* ── SURE / TIMER ── */
+    #timer-card { background: linear-gradient(135deg,#e8604c,#c04030); color:#fff; }
+    body.dark #timer-card { background: linear-gradient(135deg,#c04030,#902010); }
+    #timer-display { font-size:17px; display:block; margin-top:6px; }
+    #timer-display.timer-danger { color:#ffe0d0; animation: timer-blink .5s ease infinite alternate; }
+    @keyframes timer-blink { from {opacity:1} to {opacity:.4} }
+
+    /* ── SKOR LİSTESİ ── */
+    .score-list-row {
+      display: flex;
+      justify-content: space-between;
+      padding: 5px 2px;
+      border-bottom: 1px solid rgba(0,0,0,.07);
+      font-size: 8px;
+    }
+    body.dark .score-list-row { border-color: rgba(255,255,255,.07); }
+
+    /* ── GELİŞMİŞ COMBO ── */
+    #combo-toast[data-combo="3"].show { background: #7c5cbf; }
+    #combo-toast[data-combo="4"].show { background: #e8604c; font-size: 14px; }
+    #combo-toast[data-combo="5"].show { background: #e82020; font-size: 16px; }
+    @keyframes combo-appear { from { transform: translateX(-50%) scale(1.35); } to { transform: translateX(-50%) scale(1); } }
+    #combo-toast.show { animation: combo-appear .17s ease; }
+
+    /* ── GERI AL BUTONU ── */
+    #undo-btn {
+      position: relative;
+      font-size: 14px;
+      width: 44px; height: 42px;
+      padding: 0;
+      background: rgba(0,0,0,.12);
+      color: inherit;
+      border-radius: 12px;
+      opacity: 0.35;
+      cursor: not-allowed;
+      display: flex; align-items: center; justify-content: center; gap: 2px;
+      flex-direction: column;
+    }
+    #undo-btn.charged { opacity: 1; cursor: pointer; }
+    body.dark #undo-btn { background: rgba(255,255,255,.1); }
+    #undo-btn[data-tooltip]::after {
+      content: attr(data-tooltip);
+      position: absolute;
+      bottom: calc(100% + 6px);
+      left: 50%;
+      transform: translateX(-50%);
+      background: #263238;
+      color: #fff;
+      border-radius: 8px;
+      padding: 5px 10px;
+      font-size: 7px;
+      white-space: nowrap;
+      pointer-events: none;
+      opacity: 0;
+      transition: opacity .2s;
+      z-index: 30;
+    }
+    #undo-btn.charged[data-tooltip]:hover::after { opacity: 1; }
+    body.dark #undo-btn[data-tooltip]::after { background: #1a2235; }
+
+    /* ── IPUCU BUTONU ── */
+    #hint-btn {
+      background: rgba(0,0,0,.1);
+      color: inherit;
+      border-radius: 10px;
+      padding: 5px 14px;
+      font-size: 8px;
+      opacity: 0.7;
+      cursor: pointer;
+    }
+    #hint-btn.active { background: #5d8ed8; color: white; opacity: 1; }
+    body.dark #hint-btn { background: rgba(255,255,255,.1); }
+    body.dark #hint-btn.active { background: #3560b8; }
+
     /* ── PARTİKEL ── */
     .particle {
       position: absolute;
@@ -709,8 +817,12 @@
   <main class="game" id="game-container" style="display:none">
     <div class="top">
       <img id="top-logo" src="images/Logo Horizontal.png" alt="Cat Blast" />
-      <div>
+      <div style="display:flex;gap:6px;align-items:center">
         <button id="debug-btn" class="secondary" onclick="toggleDebugPanel()" title="Test Paneli">🔧</button>
+        <button id="undo-btn" onclick="applyUndo()" data-tooltip="">
+          <span style="font-size:14px">↩</span>
+          <span class="pw-charges" style="position:absolute;top:-6px;right:-6px;background:#f0b84c;color:#5a3800;border-radius:999px;width:16px;height:16px;font-size:7px;display:flex;align-items:center;justify-content:center;font-family:'Press Start 2P',monospace;">2</span>
+        </button>
         <button id="pause-btn" onclick="pauseGame()">⏸</button>
       </div>
     </div>
@@ -719,6 +831,7 @@
       <div id="score-card" class="card"><span data-i18n="labelScore">Skor</span> <b id="sv">0</b></div>
       <div class="card"><span data-i18n="labelBest">En İyi</span> <b id="bv">0</b></div>
       <div class="card"><span data-i18n="labelLevel">Seviye</span> <b id="lv-val">1</b></div>
+      <div id="timer-card" class="card" style="display:none">⏱ <b id="timer-display">90s</b></div>
     </div>
 
     <div class="prog-labels">
@@ -732,6 +845,11 @@
         <span class="pw-icon">🐾</span>
         <span data-i18n="pwClawName">Pençe Darbesi</span>
         <span class="pw-charges" id="claw-charges">0</span>
+      </button>
+      <button id="bomb-btn" class="powerup-btn" onclick="activateBomb()">
+        <span class="pw-icon">💥</span>
+        <span data-i18n="pwBombName">Bomba</span>
+        <span class="pw-charges" id="bomb-charges">0</span>
       </button>
       <button id="gaze-btn" class="powerup-btn" onclick="activateGaze()">
         <span class="pw-icon">👁️</span>
@@ -751,6 +869,9 @@
     </section>
 
     <div id="msg" data-i18n="msgInit">Başlamak için oyunu başlat.</div>
+    <div style="text-align:center;margin-top:6px">
+      <button id="hint-btn" onclick="toggleHint()" data-tooltip="">💡 <span data-i18n="labelHint">İpucu</span></button>
+    </div>
 
     <section id="debug-panel" class="hidden" style="margin-top:12px;">
       <div style="font-size:11px;font-weight:700;text-align:center;opacity:.6;margin-bottom:6px;">TEST — Blok seç → Slot 0'a yerleşir, otomatik seçilir</div>
@@ -809,8 +930,15 @@
         <h2 data-i18n="gameOverTitle">Oyun Bitti</h2>
         <p><span data-i18n="labelLevel">Seviye</span>: <b id="go-lv">1</b></p>
         <p><span data-i18n="labelScore">Skor</span>: <b id="go-sc">0</b> — <span data-i18n="labelBest">En İyi</span>: <b id="go-best">0</b></p>
-        <button id="go-restart-btn" onclick="restartAfterGameOver()">Tekrar Oyna</button>
-        <button class="secondary" onclick="quitToMenu()" data-i18n="btnMenu">Menü</button>
+        <div style="display:flex;gap:8px;margin-top:4px">
+          <button id="go-restart-btn" onclick="restartAfterGameOver()" style="flex:1">Tekrar Oyna</button>
+          <button class="secondary" onclick="shareScore()" style="flex:1" data-i18n="shareBtn">Paylaş</button>
+        </div>
+        <button class="secondary" onclick="quitToMenu()" data-i18n="btnMenu" style="width:100%;margin-top:8px">Menü</button>
+        <div style="margin-top:14px">
+          <div style="font-size:7px;opacity:.55;margin-bottom:6px;text-align:left" data-i18n="topScores">Yüksek Skorlar</div>
+          <div id="go-score-list"></div>
+        </div>
       </div>
     </section>
 
@@ -819,7 +947,14 @@
         <h2 data-i18n="victoryTitle">🏆 Tebrikler!</h2>
         <p data-i18n="victoryMsg">Tüm seviyeleri geçtin.</p>
         <p><span data-i18n="labelScore">Skor</span>: <b id="vic-sc">0</b> — <span data-i18n="labelBest">En İyi</span>: <b id="vic-best">0</b></p>
-        <button onclick="startGame(1)" data-i18n="btnRestart">Yeniden Başla</button>
+        <div style="display:flex;gap:8px;margin-top:4px">
+          <button onclick="startGame(1)" data-i18n="btnRestart" style="flex:1">Yeniden Başla</button>
+          <button class="secondary" onclick="shareScore()" style="flex:1" data-i18n="shareBtn">Paylaş</button>
+        </div>
+        <div style="margin-top:14px">
+          <div style="font-size:7px;opacity:.55;margin-bottom:6px;text-align:left" data-i18n="topScores">Yüksek Skorlar</div>
+          <div id="vic-score-list"></div>
+        </div>
       </div>
     </section>
   </main>
@@ -831,6 +966,7 @@
       <div class="menu-btn-group">
         <button class="start-play-btn" onclick="showPlayMenu()" data-i18n="btnPlay">Oyna</button>
         <button class="start-play-btn secondary" onclick="showSettings()" data-i18n="btnSettings">Ayarlar</button>
+        <button class="start-play-btn secondary" onclick="showStats()" data-i18n="statsTitle">İstatistikler</button>
         <button class="start-play-btn secondary" onclick="showAbout()" data-i18n="btnAbout">Hakkımızda</button>
       </div>
     </div>
@@ -843,6 +979,7 @@
       <div class="menu-btn-group">
         <button class="start-play-btn" onclick="startGame(1)" data-i18n="btnLevelMode">Level Modu</button>
         <button class="start-play-btn endless-btn" onclick="startEndless()" data-i18n="btnEndless">♾️ Sonsuz Mod</button>
+        <button class="start-play-btn" onclick="startTimerGame()" style="background:#d4593c" data-i18n="btnTimerMode">⏱ Süre Modu</button>
         <button class="start-play-btn secondary back-btn" onclick="showMainMenu()" data-i18n="btnBack">← Geri</button>
       </div>
     </div>
@@ -913,6 +1050,22 @@
       <button class="about-gh-btn" style="font-size:7px;padding:8px 14px" onclick="window.open('mailto:ardasari4859@gmail.com','_system')">📧 ardasari4859@gmail.com</button>
 
       <button class="start-play-btn secondary back-btn" style="margin-top:20px" onclick="showMainMenu()" data-i18n="btnBack">← Geri</button>
+    </div>
+  </section>
+
+  <!-- İstatistikler -->
+  <section id="stats-overlay" class="menu-screen hidden">
+    <div class="modal" style="text-align:center;max-height:90vh;overflow-y:auto">
+      <h2 data-i18n="statsTitle">İstatistikler</h2>
+      <div class="stats" style="margin-bottom:14px">
+        <div class="card" style="min-width:0"><span data-i18n="statGames" style="font-size:7px">Oyun</span><b id="stat-games">0</b></div>
+        <div class="card" style="min-width:0"><span data-i18n="statLines" style="font-size:7px">Satır</span><b id="stat-lines">0</b></div>
+        <div class="card" style="min-width:0"><span data-i18n="statPlacements" style="font-size:7px">Hamle</span><b id="stat-placements">0</b></div>
+        <div class="card" style="min-width:0"><span data-i18n="statBestScore" style="font-size:7px">Rekor</span><b id="stat-best">0</b></div>
+      </div>
+      <div style="font-size:7px;opacity:.55;margin-bottom:8px;text-align:left" data-i18n="topScores">Yüksek Skorlar</div>
+      <div id="stats-score-list" style="margin-bottom:16px"></div>
+      <button class="start-play-btn secondary back-btn" onclick="showMainMenu()" data-i18n="btnBack">← Geri</button>
     </div>
   </section>
 

@@ -149,6 +149,15 @@ const TEXTS = {
     pwClawInvalid:'Sadece dolu hücrelere uygulanır!',
     pwClawTip:'Dolu bir hücreyi yok et · her 300 puanda şarj',
     pwGazeTip:'Bir bloğu yenile · her 300 puanda şarj',
+    pwBombName:'Bomba', pwBombTip:'3×3 alanı temizle · her 300 puanda şarj', pwSelectBomb:'Patlatmak için bir hücreye tıkla',
+    labelUndo:'Geri Al', undoTip:'Son yerleştirmeyi geri al', undoNoCharge:'Geri alma hakkı kalmadı!', undoUsed:'↩ Geri alındı!',
+    labelHint:'İpucu', hintTip:'Seçili blok için geçerli yerleri göster',
+    timerMode:'⏱ Süre Modu', timerTimeUp:'Süre bitti!',
+    shareBtn:'Skoru Paylaş', shareMsg:'Cat Blast 🐱\nSkor: {score} | Seviye: {level}\nEn İyi: {best}\nSen de oyna!', scoreCopied:'Kopyalandı! 📋',
+    statsTitle:'İstatistikler', statGames:'Oyun', statLines:'Satır', statPlacements:'Hamle', statBestScore:'Rekor',
+    topScores:'Yüksek Skorlar', noScores:'Henüz skor yok.',
+    stoneSpawned:'🪨 Taş blok çıktı!',
+    btnTimerMode:'⏱ Süre Modu',
   },
   en: {
     btnPlay:'Play', btnSettings:'Settings', btnAbout:'About',
@@ -184,6 +193,15 @@ const TEXTS = {
     pwClawInvalid:'Only filled cells can be clawed!',
     pwClawTip:'Destroy a filled cell · charges every 300 pts',
     pwGazeTip:'Refresh a block · charges every 300 pts',
+    pwBombName:'Bomb', pwBombTip:'Clear 3×3 area · charges every 300 pts', pwSelectBomb:'Click a cell to blast',
+    labelUndo:'Undo', undoTip:'Undo last placement', undoNoCharge:'No undo charges left!', undoUsed:'↩ Undone!',
+    labelHint:'Hint', hintTip:'Show valid placements for selected block',
+    timerMode:'⏱ Timer Mode', timerTimeUp:'Time is up!',
+    shareBtn:'Share Score', shareMsg:'Cat Blast 🐱\nScore: {score} | Level: {level}\nBest: {best}\nPlay now!', scoreCopied:'Copied! 📋',
+    statsTitle:'Statistics', statGames:'Games', statLines:'Lines', statPlacements:'Moves', statBestScore:'Best Score',
+    topScores:'High Scores', noScores:'No scores yet.',
+    stoneSpawned:'🪨 Stone block appeared!',
+    btnTimerMode:'⏱ Timer Mode',
   },
   cat: {
     btnPlay:'Meow!', btnSettings:'Purrr~', btnAbout:'Mrrrow',
@@ -219,6 +237,15 @@ const TEXTS = {
     pwClawInvalid:'Mrrow! Dolu mew lazım!',
     pwClawTip:'Mew nyaa pençe! · 300 mew = şarj',
     pwGazeTip:'Purr mew değiştir · 300 mew = şarj',
+    pwBombName:'PATLAT!', pwBombTip:'3×3 BOOM meow · 300 mew', pwSelectBomb:'Mew BOOM tıkla~',
+    labelUndo:'Geri Mew', undoTip:'Mew geri al purr!', undoNoCharge:'Mrr geri yok!', undoUsed:'↩ Meeow!',
+    labelHint:'İpucu', hintTip:'Mew purr göster nyaa',
+    timerMode:'⏱ Mew Mew!', timerTimeUp:'Mrroww süre bitti!',
+    shareBtn:'Purr~', shareMsg:'Cat Blast 🐱\nMew: {score} | Nyaa: {level}\nPurr: {best}\nMeow meow!', scoreCopied:'Mew kopyalandı! 📋',
+    statsTitle:'Mew Mew', statGames:'Oyun', statLines:'Satır', statPlacements:'Hamle', statBestScore:'Purr Rekor',
+    topScores:'Top Mew Skorlar', noScores:'Henüz mew yok.',
+    stoneSpawned:'🪨 Taş mew çıktı!',
+    btnTimerMode:'⏱ Meeeow!',
   },
 };
 let currentLang = 'tr';
@@ -241,8 +268,14 @@ function applyLang() {
   });
   const clawBtn = document.getElementById('claw-btn');
   const gazeBtn = document.getElementById('gaze-btn');
+  const bombBtn = document.getElementById('bomb-btn');
+  const undoBtn = document.getElementById('undo-btn');
+  const hintBtn = document.getElementById('hint-btn');
   if (clawBtn) clawBtn.dataset.tooltip = T('pwClawTip');
   if (gazeBtn) gazeBtn.dataset.tooltip = T('pwGazeTip');
+  if (bombBtn) bombBtn.dataset.tooltip = T('pwBombTip');
+  if (undoBtn) undoBtn.dataset.tooltip = T('undoTip');
+  if (hintBtn) hintBtn.dataset.tooltip = T('hintTip');
   if (gameActive) updateProgress();
 }
 
@@ -258,16 +291,24 @@ let bgMusic = null;
 let musicVolume = 0.7, sfxVolume = 0.7;
 let audioCtx;
 let catSprites = [], catAnimTimer = null;
-let clawCharges = 0, gazeCharges = 0;
-let clawActive = false, gazeActive = false;
+let clawCharges = 0, gazeCharges = 0, bombCharges = 0;
+let clawActive = false, gazeActive = false, bombActive = false;
+let undoCharges = 0, _savedState = null;
+let hintActive = false;
+let timerMode = false, timerSeconds = 0, _timerInterval = null;
+let stoneSpawnCounter = 0;
+let scoreHistory = [];
+let gameStats = { games: 0, linesCleared: 0, totalPlacements: 0 };
 const PW_MAX = 3, PW_THRESHOLD = 300;
 
 try { bestScore = parseInt(localStorage.getItem('bb_lv2_best') || '0'); }
 catch(e) { bestScore = 0; }
 try { darkMode = localStorage.getItem('bb_dark') === '1'; }
 catch(e) {}
-try { musicVolume = parseFloat(localStorage.getItem('bb_vol')     ?? '0.7'); } catch(e) {}
-try { sfxVolume   = parseFloat(localStorage.getItem('bb_sfx_vol') ?? '0.7'); } catch(e) {}
+try { const v = parseFloat(localStorage.getItem('bb_vol'));     musicVolume = (isFinite(v) && v > 0) ? v : 0.7; } catch(e) {}
+try { const v = parseFloat(localStorage.getItem('bb_sfx_vol')); sfxVolume   = (isFinite(v) && v > 0) ? v : 0.7; } catch(e) {}
+try { scoreHistory = JSON.parse(localStorage.getItem('bb_scores') || '[]'); } catch(e) { scoreHistory = []; }
+try { gameStats = Object.assign({ games: 0, linesCleared: 0, totalPlacements: 0 }, JSON.parse(localStorage.getItem('bb_stats') || '{}')); } catch(e) {}
 
 // ── INIT (called on page load) ────────────────────────────────────
 function init() {
@@ -319,7 +360,9 @@ function getACtx() {
 function beep(f, d, t = 'sine', v = 0.09) {
   if (!sfxOn) return;
   try {
-    const c = getACtx(), o = c.createOscillator(), g = c.createGain();
+    const c = getACtx();
+    if (c.state === 'suspended') { c.resume(); }
+    const o = c.createOscillator(), g = c.createGain();
     o.connect(g); g.connect(c.destination);
     o.type = t; o.frequency.value = f;
     g.gain.setValueAtTime(v * sfxVolume, c.currentTime);
@@ -336,6 +379,9 @@ function playNewPieces() { [370,440,550].forEach((f,i) => setTimeout(() => beep(
 function playLevelUp()   { [523,659,784,880,1046].forEach((f,i) => setTimeout(() => beep(f, 0.16, 'sine', 0.14), i*70)); }
 function playVictory()   { [523,659,784,1046,1318,1568].forEach((f,i) => setTimeout(() => beep(f, 0.18, 'sine', 0.15), i*80)); }
 function playClick()     { beep(440, 0.07, 'sine', 0.08); }
+function playBomb()      { [220, 160, 110, 80].forEach((f,i) => setTimeout(() => beep(f, 0.18, 'sawtooth', 0.1), i*40)); }
+function playUndo()      { [440, 330, 220].forEach((f,i) => setTimeout(() => beep(f, 0.1, 'sine', 0.09), i*60)); }
+function playTimerTick() { beep(880, 0.06, 'square', 0.06); }
 
 function haptic(pattern) {
   try { if (navigator.vibrate) navigator.vibrate(pattern); } catch(e) {}
@@ -439,7 +485,7 @@ function toggleDark() {
 }
 
 // ── OVERLAYS ──────────────────────────────────────────────────────
-const OVERLAYS = ['main-menu-overlay','play-overlay','settings-overlay','about-overlay','pause-overlay','levelup-overlay','gameover-overlay','victory-overlay'];
+const OVERLAYS = ['main-menu-overlay','play-overlay','settings-overlay','about-overlay','stats-overlay','pause-overlay','levelup-overlay','gameover-overlay','victory-overlay'];
 function showOverlay(id) { OVERLAYS.forEach(o => document.getElementById(o).classList.toggle('hidden', o !== id)); }
 function hideAll() { OVERLAYS.forEach(o => document.getElementById(o).classList.add('hidden')); }
 
@@ -450,13 +496,9 @@ function showAbout()     { playClick(); showOverlay('about-overlay'); }
 
 // ── GAME FLOW ─────────────────────────────────────────────────────
 function startEndless() {
+  timerMode = false;
   endlessMode = true;
   startGame(1, true);
-}
-
-function restartAfterGameOver() {
-  playClick(); hideAll();
-  _initLevel(1);
 }
 
 function startGame(lvNum, endless = false) {
@@ -470,6 +512,11 @@ function startGame(lvNum, endless = false) {
   }, 900);
 }
 
+function restartAfterGameOver() {
+  playClick(); hideAll();
+  _initLevel(1);
+}
+
 function _initLevel(lvNum) {
   document.getElementById('game-container').style.display = '';
   currentLevel = lvNum || 1;
@@ -478,9 +525,11 @@ function _initLevel(lvNum) {
   board = Array.from({length: ROWS}, () => Array(COLS).fill(null));
   obstacles = new Set();
   placedGroups = []; cellToGroup = {};
-  if (lvNum === 1) { score = 0; clawCharges = 0; gazeCharges = 0; }
+  if (lvNum === 1) { score = 0; clawCharges = 0; gazeCharges = 0; bombCharges = 0; undoCharges = 2; _savedState = null; }
   levelScore = 0;
-  clawActive = false; gazeActive = false;
+  clawActive = false; gazeActive = false; bombActive = false; hintActive = false;
+  stoneSpawnCounter = 0;
+  stopTimer();
   paused = false; gameActive = true;
   playBgMusic();
   placeObstacles(lv.obstacles);
@@ -489,6 +538,9 @@ function _initLevel(lvNum) {
   CAT_DEFS.forEach(def => loadCatSheetByDef(def, () => {}));
   catAnimTimer = setInterval(() => catSprites.forEach(playCatAnim), CAT_IDLE_MS);
   document.getElementById('powerup-bar').classList.remove('hidden');
+  const timerCardEl = document.getElementById('timer-card');
+  if (timerCardEl) timerCardEl.style.display = timerMode ? '' : 'none';
+  if (timerMode) setTimeout(startTimer, 1000);
   updatePowerupUI();
   buildGrid(COLS, ROWS);
   _lastCellSize = cs();
@@ -526,16 +578,18 @@ function goNextLevel() {
 
 function pauseGame() {
   if (!gameActive || paused) return;
-  cancelClaw(); cancelGaze();
+  cancelClaw(); cancelGaze(); cancelBomb(); clearHint();
+  if (timerMode) stopTimer();
   paused = true; playClick();
   document.getElementById('pause-info').textContent = T('pauseSub', { lv: currentLevel, sc: score });
   showOverlay('pause-overlay');
 }
 
-function resumeGame() { playClick(); paused = false; hideAll(); playBgMusic(); }
+function resumeGame() { playClick(); paused = false; hideAll(); playBgMusic(); if (timerMode && timerSeconds > 0) startTimerCountdown(); }
 
 function quitToMenu() {
-  cancelClaw(); cancelGaze();
+  cancelClaw(); cancelGaze(); cancelBomb(); clearHint();
+  stopTimer(); timerMode = false;
   playClick(); paused = false; gameActive = false;
   document.getElementById('game-container').style.display = 'none';
   document.getElementById('powerup-bar').classList.add('hidden');
@@ -553,6 +607,7 @@ document.addEventListener('keydown', e => {
     if (dragState) { cancelDrag(); return; }
     if (clawActive) { cancelClaw(); return; }
     if (gazeActive) { cancelGaze(); return; }
+    if (bombActive) { cancelBomb(); return; }
     if (gameActive && !paused) pauseGame();
     else if (paused) resumeGame();
   }
@@ -569,19 +624,20 @@ function buildGrid(cols, rows) {
   for (let y = 0; y < rows; y++) {
     for (let x = 0; x < cols; x++) {
       const c = document.createElement('div');
+      c.className = 'gcell';
       c.style.width  = size + 'px';
       c.style.height = size + 'px';
       c.dataset.r = y;
       c.dataset.c = x;
-      c.addEventListener('click',       () => { if (clawActive) applyClaw(y, x); });
-      c.addEventListener('mouseenter',  () => applyGroupHover(y * COLS + x, true));
-      c.addEventListener('mouseleave',  () => { if (!dragState) clearPreview(); applyGroupHover(y * COLS + x, false); });
+      c.addEventListener('click',       () => { if (clawActive) applyClaw(y, x); else if (bombActive) applyBomb(y, x); });
+      c.addEventListener('mouseenter',  () => { applyGroupHover(y * COLS + x, true); if (bombActive) showBombPreview(y, x); });
+      c.addEventListener('mouseleave',  () => { if (!dragState) clearPreview(); applyGroupHover(y * COLS + x, false); if (bombActive) clearBombPreview(); });
       g.appendChild(c);
     }
   }
 }
 
-function allCells() { return document.querySelectorAll('#grid div'); }
+function allCells() { return document.querySelectorAll('#grid .gcell'); }
 
 function applyGroupHover(idx, on) {
   const gIdx = cellToGroup[idx];
@@ -604,6 +660,9 @@ function renderGrid() {
     c.style.background = '';
     if (obstacles.has(idx)) {
       c.className = 'gcell obstacle';
+    } else if (board[r][col] === '__stone__') {
+      c.className = 'gcell stone-block';
+      c.style.background = '';
     } else if (board[r][col] && board[r][col] !== '__obstacle__') {
       c.className = 'gcell filled';
       c.style.background = board[r][col];
@@ -725,12 +784,7 @@ function animateClears(toClear) {
 }
 
 function dismissPiece(i) {
-  const card = document.getElementById('p' + i);
-  card.classList.add('vanish');
-  setTimeout(() => {
-    card.style.visibility    = 'hidden';
-    card.style.pointerEvents = 'none';
-  }, 220);
+  document.getElementById('p' + i).classList.add('vanish');
 }
 
 function selectPiece(i) {
@@ -738,6 +792,7 @@ function selectPiece(i) {
   selectedPiece = i; playSelect();
   document.querySelectorAll('.piece-card').forEach((c, j) => c.classList.toggle('selected', j === i && !usedFlags[j]));
   setMsg(T('msgPlacePiece'));
+  if (hintActive) showHint();
 }
 
 function placeOnGrid(row, col) {
@@ -747,6 +802,7 @@ function placeOnGrid(row, col) {
   const p = pieces[selectedPiece];
   const { r, c } = adjustedAnchor(p.shape, row, col);
   if (!canPlace(p.shape, r, c)) { setMsg(T('msgNoFit')); return; }
+  saveUndoState();
   playPlace(); haptic(12);
 
   const placed = [];
@@ -767,7 +823,7 @@ function placeOnGrid(row, col) {
   usedFlags[usedIdx] = true;
   selectedPiece = null;
   document.querySelectorAll('.piece-card').forEach(c => c.classList.remove('selected'));
-  clearPreview();
+  clearPreview(); clearHint();
   dismissPiece(usedIdx);
 
   const ac = allCells();
@@ -792,13 +848,15 @@ function placeOnGrid(row, col) {
     updateScoreUI(); updateProgress();
     checkAndGrantCharges(oldScore, score);
     showScoreFly(pts, row, col);
+    gameStats.totalPlacements++;
+    if (cleared > 0) gameStats.linesCleared += cleared;
+    maybeSpawnStone();
     if (cleared > 0) {
       playLineClear(cleared); animateClears(toClear);
       haptic(cleared >= 3 ? [20, 8, 20, 8, 50] : [20, 10, 30]);
       if (cleared >= 2) setTimeout(() => { playCombo(); showCombo(cleared); haptic([15, 8, 15, 8, 55]); }, 360);
     }
-    const lv = getLv(currentLevel);
-    if (!endlessMode && levelScore >= lv.target) { setTimeout(showLevelUp, cleared > 0 ? 500 : 250); return; }
+    if (!endlessMode && levelScore >= getLv(currentLevel).target) { setTimeout(showLevelUp, cleared > 0 ? 500 : 250); return; }
     const allUsed = usedFlags.every(Boolean);
     if (allUsed) setTimeout(() => newPieces(), cleared > 0 ? 420 : 200);
     else if (!anyRemainingCanPlace()) setTimeout(showGameOver, cleared > 0 ? 420 : 200);
@@ -822,8 +880,9 @@ function showScoreFly(pts, row, col) {
 function showCombo(n) {
   const t = document.getElementById('combo-toast');
   t.textContent = n >= 4 ? T('comboGreat', { n }) : T('combo', { n });
+  t.dataset.combo = n;
   t.className = 'show';
-  setTimeout(() => t.className = '', 760);
+  setTimeout(() => { t.className = ''; delete t.dataset.combo; }, 760);
 }
 
 function updateScoreUI() {
@@ -875,21 +934,25 @@ function showLevelUp() {
 }
 
 function showVictory() {
-  cancelClaw(); cancelGaze();
+  cancelClaw(); cancelGaze(); cancelBomb(); clearHint();
+  stopTimer();
   stopCatTimer();
   pauseBgMusic();
   playVictory();
+  saveScoreHistory();
   document.getElementById('vic-sc').textContent   = score;
   document.getElementById('vic-best').textContent = bestScore;
   showOverlay('victory-overlay');
 }
 
 function showGameOver() {
-  cancelClaw(); cancelGaze();
+  cancelClaw(); cancelGaze(); cancelBomb(); clearHint();
+  stopTimer();
   gameActive = false; playGameOver(); haptic([80, 30, 80]);
   stopCatTimer();
   pauseBgMusic();
-  document.getElementById('go-lv').textContent   = endlessMode ? T('goEndlessLv') : currentLevel;
+  saveScoreHistory();
+  document.getElementById('go-lv').textContent   = timerMode ? T('timerMode') : (endlessMode ? T('goEndlessLv') : currentLevel);
   document.getElementById('go-sc').textContent   = score;
   document.getElementById('go-best').textContent = bestScore;
   document.getElementById('go-restart-btn').textContent = endlessMode ? T('btnPlayAgainEndless') : T('btnPlayAgain');
@@ -953,7 +1016,7 @@ function newPieces() {
     for (let i = 0; i < 3; i++) document.getElementById('p' + i).classList.add('gaze-available');
   }
   setMsg(gazeActive ? T('pwSelectPiece') : T('msgSelectPiece'));
-  if (!anyRemainingCanPlace()) setTimeout(showGameOver, 400);
+  if (!anyRemainingCanPlace()) { setTimeout(showGameOver, 150); return; }
 }
 
 // ── CAT SPRITE SYSTEM ─────────────────────────────────────────────
@@ -1063,13 +1126,64 @@ function createCatSprite(row, col, def) {
 }
 
 function removeCatSprites(toClear) {
+  const orphanedIdxs = [];
   catSprites = catSprites.filter(({ r, c, el, def }) => {
     const occupied = [];
     def.shape.forEach((row, dr) => row.forEach((v, dc) => {
       if (v) occupied.push((r + dr) * COLS + (c + dc));
     }));
-    if (occupied.some(i => toClear.has(i))) { el.remove(); return false; }
-    return true;
+    if (!occupied.some(i => toClear.has(i))) return true;
+    el.remove();
+    occupied.filter(i => !toClear.has(i)).forEach(i => orphanedIdxs.push(i));
+    return false;
+  });
+  if (!orphanedIdxs.length) return;
+
+  // Deduplicate ve board'da hâlâ dolu olanları al
+  const seen = new Set();
+  const cells = [];
+  orphanedIdxs.forEach(idx => {
+    if (seen.has(idx)) return;
+    seen.add(idx);
+    const r = Math.floor(idx / COLS), c = idx % COLS;
+    if (board[r][c] && board[r][c] !== '__obstacle__' && board[r][c] !== '__stone__')
+      cells.push({ r, c });
+  });
+  if (!cells.length) return;
+
+  // Bağlı grupları bul (yatay/dikey komşuluk)
+  const cellMap = new Map(cells.map(({ r, c }) => [r * COLS + c, { r, c }]));
+  const visited = new Set();
+  cells.forEach(({ r, c }) => {
+    const key = r * COLS + c;
+    if (visited.has(key)) return;
+    // BFS
+    const group = [];
+    const queue = [{ r, c }];
+    visited.add(key);
+    while (queue.length) {
+      const { r: cr, c: cc } = queue.shift();
+      group.push({ r: cr, c: cc });
+      [[cr - 1, cc], [cr + 1, cc], [cr, cc - 1], [cr, cc + 1]].forEach(([nr, nc]) => {
+        const nk = nr * COLS + nc;
+        if (!visited.has(nk) && cellMap.has(nk)) { visited.add(nk); queue.push({ r: nr, c: nc }); }
+      });
+    }
+    // Grubun şeklini normalize et
+    const minR = Math.min(...group.map(x => x.r));
+    const minC = Math.min(...group.map(x => x.c));
+    const maxR = Math.max(...group.map(x => x.r));
+    const maxC = Math.max(...group.map(x => x.c));
+    const shape = Array.from({ length: maxR - minR + 1 }, () => Array(maxC - minC + 1).fill(0));
+    group.forEach(({ r, c }) => { shape[r - minR][c - minC] = 1; });
+    const catDef = findCatDef(shape);
+    if (catDef) {
+      createCatSprite(minR, minC, catDef);
+    } else {
+      // Eşleşen şekil yok → her hücreye 1x1 kedi
+      const cat1x1 = findCatDef([[1]]);
+      if (cat1x1) group.forEach(({ r, c }) => createCatSprite(r, c, cat1x1));
+    }
   });
 }
 
@@ -1077,13 +1191,24 @@ function removeCatSprites(toClear) {
 function updatePowerupUI() {
   const clawBtn = document.getElementById('claw-btn');
   const gazeBtn = document.getElementById('gaze-btn');
+  const bombBtn = document.getElementById('bomb-btn');
+  const undoBtn = document.getElementById('undo-btn');
   if (!clawBtn) return;
   document.getElementById('claw-charges').textContent = clawCharges;
   document.getElementById('gaze-charges').textContent = gazeCharges;
+  if (document.getElementById('bomb-charges')) document.getElementById('bomb-charges').textContent = bombCharges;
   clawBtn.classList.toggle('charged', clawCharges > 0);
   gazeBtn.classList.toggle('charged', gazeCharges > 0);
+  if (bombBtn) bombBtn.classList.toggle('charged', bombCharges > 0);
   clawBtn.classList.toggle('active', clawActive);
   gazeBtn.classList.toggle('active', gazeActive);
+  if (bombBtn) bombBtn.classList.toggle('active', bombActive);
+  if (undoBtn) {
+    const canUndo = undoCharges > 0 && !!_savedState;
+    undoBtn.classList.toggle('charged', canUndo);
+    const chargeEl = undoBtn.querySelector('.pw-charges');
+    if (chargeEl) chargeEl.textContent = undoCharges;
+  }
 }
 
 function checkAndGrantCharges(oldScore, newScore) {
@@ -1092,6 +1217,7 @@ function checkAndGrantCharges(oldScore, newScore) {
   let granted = false;
   if (clawCharges < PW_MAX) { clawCharges = Math.min(PW_MAX, clawCharges + gained); granted = true; }
   if (gazeCharges < PW_MAX) { gazeCharges = Math.min(PW_MAX, gazeCharges + gained); granted = true; }
+  if (bombCharges < PW_MAX) { bombCharges = Math.min(PW_MAX, bombCharges + gained); granted = true; }
   if (granted) { updatePowerupUI(); showPwToast(T('pwChargeGained')); playPowerup(); }
 }
 
@@ -1135,6 +1261,7 @@ function applyClaw(row, col) {
   if (!board[row][col] || board[row][col] === '__obstacle__' || obstacles.has(idx)) {
     setMsg(T('pwClawInvalid')); return;
   }
+  // stone blocks allowed — treated same as filled cell
   clawCharges--;
   // Şarj kalmadıysa modu kapat, kaldıysa aktif devam et
   if (clawCharges <= 0) {
@@ -1203,6 +1330,272 @@ function applyGaze(idx) {
   if (!anyRemainingCanPlace()) setTimeout(showGameOver, 400);
 }
 
+// Bomba — 3×3 alanı temizle
+function activateBomb() {
+  if (!gameActive || paused) return;
+  if (bombActive) { cancelBomb(); return; }
+  if (bombCharges <= 0) { setMsg(T('pwNoCharge')); return; }
+  cancelClaw(); cancelGaze();
+  bombActive = true;
+  selectedPiece = null;
+  document.querySelectorAll('.piece-card').forEach(c => c.classList.remove('selected'));
+  clearPreview(); clearHint();
+  document.getElementById('grid').classList.add('bomb-mode');
+  setMsg(T('pwSelectBomb'));
+  updatePowerupUI();
+  playClick();
+}
+
+function cancelBomb() {
+  if (!bombActive) return;
+  bombActive = false;
+  clearBombPreview();
+  document.getElementById('grid').classList.remove('bomb-mode');
+  updatePowerupUI();
+  if (gameActive) setMsg(T('msgSelectPiece'));
+}
+
+function showBombPreview(row, col) {
+  clearBombPreview();
+  const ac = allCells();
+  for (let dr = -1; dr <= 1; dr++) {
+    for (let dc = -1; dc <= 1; dc++) {
+      const nr = row + dr, nc = col + dc;
+      if (nr < 0 || nr >= ROWS || nc < 0 || nc >= COLS) continue;
+      const idx = nr * COLS + nc;
+      if (!obstacles.has(idx)) ac[idx].classList.add('bomb-preview');
+    }
+  }
+}
+
+function clearBombPreview() {
+  document.querySelectorAll('.bomb-preview').forEach(el => el.classList.remove('bomb-preview'));
+}
+
+function applyBomb(row, col) {
+  bombCharges--;
+  clearBombPreview();
+  if (bombCharges <= 0) {
+    bombActive = false;
+    document.getElementById('grid').classList.remove('bomb-mode');
+  }
+  updatePowerupUI();
+  const toClear = new Set();
+  for (let dr = -1; dr <= 1; dr++) {
+    for (let dc = -1; dc <= 1; dc++) {
+      const nr = row + dr, nc = col + dc;
+      if (nr < 0 || nr >= ROWS || nc < 0 || nc >= COLS) continue;
+      const idx = nr * COLS + nc;
+      if (obstacles.has(idx)) continue;
+      if (board[nr][nc]) toClear.add(idx);
+    }
+  }
+  toClear.forEach(idx => {
+    const r = Math.floor(idx / COLS), c = idx % COLS;
+    board[r][c] = null;
+    const g = cellToGroup[idx];
+    if (g !== undefined) { placedGroups[g]?.delete(idx); delete cellToGroup[idx]; }
+  });
+  removeCatSprites(toClear);
+  animateClears(toClear);
+  playBomb(); haptic([30, 10, 30, 10, 60]);
+  const pts = toClear.size * 8;
+  const oldScore = score;
+  score += pts; levelScore += pts;
+  if (score > bestScore) { bestScore = score; try { localStorage.setItem('bb_lv2_best', bestScore); } catch(e) {} }
+  updateScoreUI(); updateProgress();
+  checkAndGrantCharges(oldScore, score);
+  if (pts > 0) showScoreFly(pts, row, col);
+  setTimeout(() => {
+    const lv = getLv(currentLevel);
+    if (!endlessMode && levelScore >= lv.target) { showLevelUp(); return; }
+    if (!anyRemainingCanPlace()) { showGameOver(); return; }
+    setMsg(bombActive ? T('pwSelectBomb') : T('msgSelectPiece'));
+  }, 420);
+}
+
+// ── GERI AL ───────────────────────────────────────────────────────
+function saveUndoState() {
+  if (undoCharges <= 0) return;
+  _savedState = {
+    board: board.map(r => [...r]),
+    obstacles: new Set(obstacles),
+    score, levelScore,
+    pieces: pieces.map(p => ({ shape: p.shape.map(r => [...r]), color: p.color })),
+    usedFlags: [...usedFlags],
+    clawCharges, gazeCharges, bombCharges,
+    placedGroups: placedGroups.map(s => new Set(s)),
+    cellToGroup: { ...cellToGroup },
+    stoneSpawnCounter,
+  };
+}
+
+function applyUndo() {
+  if (!gameActive || paused) { return; }
+  if (!_savedState || undoCharges <= 0) { setMsg(T('undoNoCharge')); return; }
+  undoCharges--;
+  const s = _savedState;
+  _savedState = null;
+  board = s.board;
+  obstacles = s.obstacles;
+  score = s.score; levelScore = s.levelScore;
+  pieces = s.pieces; usedFlags = s.usedFlags;
+  clawCharges = s.clawCharges; gazeCharges = s.gazeCharges; bombCharges = s.bombCharges;
+  placedGroups = s.placedGroups; cellToGroup = s.cellToGroup;
+  stoneSpawnCounter = s.stoneSpawnCounter;
+  selectedPiece = null;
+  cancelClaw(); cancelGaze(); cancelBomb(); clearHint();
+  clearAllCats();
+  renderGrid();
+  renderPieces();
+  updateScoreUI(); updateProgress(); updatePowerupUI();
+  setMsg(T('undoUsed'));
+  playUndo(); haptic([20, 10, 20]);
+}
+
+// ── IPUCU ─────────────────────────────────────────────────────────
+function toggleHint() {
+  if (!gameActive || paused) return;
+  hintActive = !hintActive;
+  const btn = document.getElementById('hint-btn');
+  if (btn) btn.classList.toggle('active', hintActive);
+  if (hintActive && selectedPiece !== null) showHint();
+  else clearHint();
+  playClick();
+}
+
+function showHint() {
+  clearHint();
+  if (selectedPiece === null || !hintActive) return;
+  const p = pieces[selectedPiece];
+  const cells = allCells();
+  for (let r = 0; r < ROWS; r++)
+    for (let c = 0; c < COLS; c++)
+      if (canPlace(p.shape, r, c)) cells[r * COLS + c].classList.add('hint-cell');
+}
+
+function clearHint() {
+  allCells().forEach(c => c.classList.remove('hint-cell'));
+}
+
+// ── SURE MODU ─────────────────────────────────────────────────────
+function startTimer() {
+  timerSeconds = 90;
+  updateTimerDisplay();
+  startTimerCountdown();
+}
+
+function startTimerCountdown() {
+  if (_timerInterval) clearInterval(_timerInterval);
+  _timerInterval = setInterval(() => {
+    timerSeconds--;
+    updateTimerDisplay();
+    if (timerSeconds <= 10 && timerSeconds > 0) { haptic(20); playTimerTick(); }
+    if (timerSeconds <= 0) { stopTimer(); setTimeout(showGameOver, 200); }
+  }, 1000);
+}
+
+function stopTimer() {
+  if (_timerInterval) { clearInterval(_timerInterval); _timerInterval = null; }
+}
+
+function updateTimerDisplay() {
+  const el = document.getElementById('timer-display');
+  if (!el) return;
+  el.textContent = timerSeconds + 's';
+  el.classList.toggle('timer-danger', timerSeconds <= 10);
+}
+
+// ── TAS BLOK ──────────────────────────────────────────────────────
+function maybeSpawnStone() {
+  if (!gameActive) return;
+  if (!endlessMode && currentLevel < 2) return;
+  stoneSpawnCounter++;
+  const threshold = endlessMode ? 6 : 9;
+  if (stoneSpawnCounter % threshold !== 0) return;
+  const empties = [];
+  for (let r = 0; r < ROWS; r++)
+    for (let c = 0; c < COLS; c++)
+      if (!board[r][c] && !obstacles.has(r * COLS + c)) empties.push([r, c]);
+  if (empties.length < 5) return;
+  const [r, c] = empties[Math.floor(Math.random() * empties.length)];
+  board[r][c] = '__stone__';
+  renderGrid();
+  showPwToast(T('stoneSpawned'));
+  haptic([15, 10, 15]);
+}
+
+// ── PAYLASMA / ISTATISTIK ─────────────────────────────────────────
+function shareScore() {
+  const text = T('shareMsg', { score, level: timerMode ? '⏱' : (endlessMode ? '∞' : currentLevel), best: bestScore });
+  if (navigator.clipboard) {
+    navigator.clipboard.writeText(text).then(() => showPwToast(T('scoreCopied'))).catch(() => {});
+  }
+  haptic(30);
+}
+
+function saveScoreHistory() {
+  gameStats.games++;
+  try { localStorage.setItem('bb_stats', JSON.stringify(gameStats)); } catch(e) {}
+  if (score <= 0) return;
+  const levelLabel = timerMode ? '⏱' : (endlessMode ? '∞' : currentLevel);
+  scoreHistory.push({ score, level: levelLabel, date: new Date().toLocaleDateString('tr-TR') });
+  scoreHistory.sort((a, b) => b.score - a.score);
+  scoreHistory = scoreHistory.slice(0, 5);
+  try { localStorage.setItem('bb_scores', JSON.stringify(scoreHistory)); } catch(e) {}
+  renderTopScores();
+}
+
+function renderTopScores() {
+  ['go-score-list', 'vic-score-list'].forEach(id => {
+    const list = document.getElementById(id);
+    if (!list) return;
+    list.innerHTML = '';
+    if (scoreHistory.length === 0) {
+      list.innerHTML = `<div style="opacity:.5;font-size:8px;text-align:center;padding:6px">${T('noScores')}</div>`;
+      return;
+    }
+    scoreHistory.forEach((entry, i) => {
+      const row = document.createElement('div');
+      row.className = 'score-list-row';
+      row.innerHTML = `<span>#${i + 1}</span><span>${entry.score}</span><span>Lv${entry.level}</span><span>${entry.date}</span>`;
+      list.appendChild(row);
+    });
+  });
+}
+
+function showStats() {
+  playClick();
+  document.getElementById('stat-games').textContent       = gameStats.games;
+  document.getElementById('stat-lines').textContent       = gameStats.linesCleared;
+  document.getElementById('stat-placements').textContent  = gameStats.totalPlacements;
+  document.getElementById('stat-best').textContent        = bestScore;
+  const list = document.getElementById('stats-score-list');
+  if (list) {
+    list.innerHTML = '';
+    if (scoreHistory.length === 0) {
+      list.innerHTML = `<div style="opacity:.5;font-size:8px;text-align:center;padding:8px">${T('noScores')}</div>`;
+    } else {
+      scoreHistory.forEach((entry, i) => {
+        const row = document.createElement('div');
+        row.className = 'score-list-row';
+        row.innerHTML = `<span>#${i + 1}</span><span>${entry.score}</span><span>Lv${entry.level}</span><span>${entry.date}</span>`;
+        list.appendChild(row);
+      });
+    }
+  }
+  showOverlay('stats-overlay');
+}
+
+function startTimerGame() {
+  timerMode = true;
+  endlessMode = true;
+  playClick(); hideAll();
+  const loading = document.getElementById('level-loading');
+  loading.classList.remove('hidden');
+  setTimeout(() => { loading.classList.add('hidden'); _initLevel(1); }, 900);
+}
+
 // ── DEBUG / TEST PANEL ────────────────────────────────────────────
 let debugOpen = false;
 
@@ -1256,6 +1649,7 @@ function startDrag(idx, clientX, clientY, isTouch) {
   if (!gameActive || paused || usedFlags[idx]) return;
   if (gazeActive) { applyGaze(idx); return; }
   if (clawActive) cancelClaw();
+  if (bombActive) cancelBomb();
   if (dragState) cancelDrag();
   playSelect();
   selectedPiece = idx;
