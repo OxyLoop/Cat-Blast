@@ -49,8 +49,20 @@ const CAT_DEFS = [
     earBodyY: 18,
   },
   {
+    shape: [[1,1,1], [1,0,0], [1,0,0]],
+    sheet: 'sprites/3x3 Upper Left Corner.png',
+    frames: 6, fpr: 6, fps: 10,
+    earBodyY: 18,
+  },
+  {
     shape: [[1,0], [1,0], [1,1]],
     sheet: 'sprites/2x3 Bottom Left Corner.png',
+    frames: 6, fpr: 6, fps: 10,
+    earBodyY: 18,
+  },
+  {
+    shape: [[0,1], [0,1], [1,1]],
+    sheet: 'sprites/2x3 Bottom Right Corner.png',
     frames: 6, fpr: 6, fps: 10,
     earBodyY: 18,
   },
@@ -76,6 +88,18 @@ const CAT_DEFS = [
     shape: [[1],[1],[1]],
     sheet: 'sprites/1x3 Vertical Block Cat.png',
     frames: 6, fpr: 6, fps: 10,
+    earBodyY: 18,
+  },
+  {
+    shape: [[1,1,1],[0,0,1]],
+    sheet: 'sprites/3x1 Right Corner Cat.png',
+    frames: 1, fpr: 1, fps: 10,
+    earBodyY: 18,
+  },
+  {
+    shape: [[1,1,1],[1,0,0]],
+    sheet: 'sprites/3x1 Left Corner Cat.png',
+    frames: 1, fpr: 1, fps: 10,
     earBodyY: 18,
   },
   // ── Buraya yeni tanımlar ekle ──────────────────────────────────
