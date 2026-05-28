@@ -543,6 +543,52 @@
     body.dark #combo-toast {
       background: #3560b8;
     }
+
+    /* ── DİL BUTONLARI ── */
+    .lang-btn {
+      width: 40px;
+      height: 36px;
+      padding: 0;
+      font-size: 9px;
+      border-radius: 10px;
+      opacity: 0.4;
+      background: #263238;
+    }
+    .lang-btn.active { opacity: 1; }
+    body.dark .lang-btn { background: #3560b8; }
+
+    /* ── HAKKIMIZDA ── */
+    .about-dev-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 10px 8px;
+      border-bottom: 1px solid rgba(0,0,0,.08);
+      font-size: 9px;
+    }
+    body.dark .about-dev-row { border-color: rgba(255,255,255,.08); }
+    .about-gh-btn {
+      background: #263238;
+      color: #fff;
+      border-radius: 10px;
+      padding: 6px 10px;
+      font-size: 7px;
+      cursor: pointer;
+      font-family: 'Press Start 2P', monospace;
+    }
+    body.dark .about-gh-btn { background: #3560b8; }
+    .about-section-label {
+      font-size: 7px;
+      opacity: .45;
+      letter-spacing: .08em;
+      margin-bottom: 8px;
+    }
+    .about-divider {
+      border: none;
+      border-top: 1px solid rgba(0,0,0,.08);
+      margin: 14px 0;
+    }
+    body.dark .about-divider { border-color: rgba(255,255,255,.08); }
   </style>
 </head>
 <body>
@@ -556,9 +602,9 @@
     </div>
 
     <div class="stats">
-      <div id="score-card" class="card">Skor <b id="sv">0</b></div>
-      <div class="card">En İyi <b id="bv">0</b></div>
-      <div class="card">Seviye <b id="lv-val">1</b></div>
+      <div id="score-card" class="card"><span data-i18n="labelScore">Skor</span> <b id="sv">0</b></div>
+      <div class="card"><span data-i18n="labelBest">En İyi</span> <b id="bv">0</b></div>
+      <div class="card"><span data-i18n="labelLevel">Seviye</span> <b id="lv-val">1</b></div>
     </div>
 
     <div class="prog-labels">
@@ -576,7 +622,7 @@
       <div id="p2" class="piece-card"></div>
     </section>
 
-    <div id="msg">Başlamak için oyunu başlat.</div>
+    <div id="msg" data-i18n="msgInit">Başlamak için oyunu başlat.</div>
 
     <section id="debug-panel" class="hidden" style="margin-top:12px;">
       <div style="font-size:11px;font-weight:700;text-align:center;opacity:.6;margin-bottom:6px;">TEST — Blok seç → Slot 0'a yerleşir, otomatik seçilir</div>
@@ -585,22 +631,30 @@
 
     <section id="pause-overlay" class="overlay hidden">
       <div class="modal">
-        <h2>Duraklatıldı</h2>
-        <p style="font-size:9px;opacity:.7;margin:4px 0 16px">Seviye <b id="pause-lv">1</b> — Skor <b id="pause-sc">0</b></p>
+        <h2 data-i18n="pauseTitle">Duraklatıldı</h2>
+        <p id="pause-info" style="font-size:9px;opacity:.7;margin:4px 0 16px">Seviye 1 — Skor 0</p>
         <div class="settings-row">
-          <span>Ses</span>
+          <span data-i18n="labelSound">Ses</span>
           <div style="display:flex;align-items:center;gap:10px">
             <button id="sound-btn" onclick="toggleSound()" style="width:44px;height:42px;padding:0;font-size:19px">🔊</button>
             <input type="range" class="vol-slider" id="vol-slider-topbar" min="0" max="100" value="70" oninput="setVolume(this.value)">
           </div>
         </div>
         <div class="settings-row">
-          <span>Tema</span>
+          <span data-i18n="labelTheme">Tema</span>
           <button id="dark-btn" onclick="toggleDark()" style="width:44px;height:42px;padding:0;font-size:19px">🌙</button>
         </div>
+        <div class="settings-row">
+          <span data-i18n="labelLang">Dil</span>
+          <div style="display:flex;gap:6px">
+            <button class="lang-btn" data-lang="tr" onclick="setLang('tr')">TR</button>
+            <button class="lang-btn" data-lang="en" onclick="setLang('en')">EN</button>
+            <button class="lang-btn" data-lang="cat" onclick="setLang('cat')">MEW</button>
+          </div>
+        </div>
         <div style="display:flex;gap:10px;margin-top:18px">
-          <button onclick="resumeGame()" style="flex:1">Devam</button>
-          <button class="secondary" onclick="quitToMenu()" style="flex:1">Menü</button>
+          <button onclick="resumeGame()" style="flex:1" data-i18n="btnResume">Devam</button>
+          <button class="secondary" onclick="quitToMenu()" style="flex:1" data-i18n="btnMenu">Menü</button>
         </div>
       </div>
     </section>
@@ -610,27 +664,27 @@
         <h2 id="lu-title">Seviye Tamam!</h2>
         <p id="lu-sub"></p>
         <div id="lu-stars" style="font-size:32px;margin:10px 0"></div>
-        <p>Skor: <b id="lu-score">0</b></p>
+        <p><span data-i18n="labelScore">Skor</span>: <b id="lu-score">0</b></p>
         <button id="lu-btn" onclick="goNextLevel()">Sonraki Seviye</button>
       </div>
     </section>
 
     <section id="gameover-overlay" class="overlay hidden">
       <div class="modal">
-        <h2>Oyun Bitti</h2>
-        <p>Seviye: <b id="go-lv">1</b></p>
-        <p>Skor: <b id="go-sc">0</b> — En iyi: <b id="go-best">0</b></p>
+        <h2 data-i18n="gameOverTitle">Oyun Bitti</h2>
+        <p><span data-i18n="labelLevel">Seviye</span>: <b id="go-lv">1</b></p>
+        <p><span data-i18n="labelScore">Skor</span>: <b id="go-sc">0</b> — <span data-i18n="labelBest">En İyi</span>: <b id="go-best">0</b></p>
         <button id="go-restart-btn" onclick="restartAfterGameOver()">Tekrar Oyna</button>
-        <button class="secondary" onclick="quitToMenu()">Menü</button>
+        <button class="secondary" onclick="quitToMenu()" data-i18n="btnMenu">Menü</button>
       </div>
     </section>
 
     <section id="victory-overlay" class="overlay hidden">
       <div class="modal">
-        <h2>🏆 Tebrikler!</h2>
-        <p>Tüm seviyeleri geçtin.</p>
-        <p>Skor: <b id="vic-sc">0</b> — En iyi: <b id="vic-best">0</b></p>
-        <button onclick="startGame(1)">Yeniden Başla</button>
+        <h2 data-i18n="victoryTitle">🏆 Tebrikler!</h2>
+        <p data-i18n="victoryMsg">Tüm seviyeleri geçtin.</p>
+        <p><span data-i18n="labelScore">Skor</span>: <b id="vic-sc">0</b> — <span data-i18n="labelBest">En İyi</span>: <b id="vic-best">0</b></p>
+        <button onclick="startGame(1)" data-i18n="btnRestart">Yeniden Başla</button>
       </div>
     </section>
   </main>
@@ -640,9 +694,9 @@
     <div class="modal" style="text-align:center">
       <img id="start-logo" src="images/Logo Vertical.png" alt="Cat Blast" onclick="easterEggClick()" style="cursor:pointer" />
       <div class="menu-btn-group">
-        <button class="start-play-btn" onclick="showPlayMenu()">Oyna</button>
-        <button class="start-play-btn secondary" onclick="showSettings()">Ayarlar</button>
-        <button class="start-play-btn secondary" onclick="showAbout()">Hakkımızda</button>
+        <button class="start-play-btn" onclick="showPlayMenu()" data-i18n="btnPlay">Oyna</button>
+        <button class="start-play-btn secondary" onclick="showSettings()" data-i18n="btnSettings">Ayarlar</button>
+        <button class="start-play-btn secondary" onclick="showAbout()" data-i18n="btnAbout">Hakkımızda</button>
       </div>
     </div>
   </section>
@@ -652,9 +706,9 @@
     <div class="modal" style="text-align:center">
       <div id="start-best" class="best-badge" style="display:none">🏆 En İyi: <b id="start-best-val">0</b></div>
       <div class="menu-btn-group">
-        <button class="start-play-btn" onclick="startGame(1)">Level Modu</button>
-        <button class="start-play-btn endless-btn" onclick="startEndless()">♾️ Sonsuz Mod</button>
-        <button class="start-play-btn secondary back-btn" onclick="showMainMenu()">← Geri</button>
+        <button class="start-play-btn" onclick="startGame(1)" data-i18n="btnLevelMode">Level Modu</button>
+        <button class="start-play-btn endless-btn" onclick="startEndless()" data-i18n="btnEndless">♾️ Sonsuz Mod</button>
+        <button class="start-play-btn secondary back-btn" onclick="showMainMenu()" data-i18n="btnBack">← Geri</button>
       </div>
     </div>
   </section>
@@ -662,28 +716,61 @@
   <!-- Ayarlar -->
   <section id="settings-overlay" class="menu-screen hidden">
     <div class="modal" style="text-align:center">
-      <h2>Ayarlar</h2>
+      <h2 data-i18n="settingsTitle">Ayarlar</h2>
       <div class="settings-row">
-        <span>Ses</span>
+        <span data-i18n="labelSound">Ses</span>
         <div style="display:flex;align-items:center;gap:10px">
           <button id="sound-btn-menu" onclick="toggleSound()" style="width:44px;height:42px;padding:0;font-size:19px">🔊</button>
           <input type="range" class="vol-slider" id="vol-slider-menu" min="0" max="100" value="70" oninput="setVolume(this.value)">
         </div>
       </div>
       <div class="settings-row">
-        <span>Tema</span>
+        <span data-i18n="labelTheme">Tema</span>
         <button id="dark-btn-menu" onclick="toggleDark()" style="width:44px;height:42px;padding:0;font-size:19px">🌙</button>
       </div>
-      <button class="start-play-btn secondary back-btn" onclick="showMainMenu()">← Geri</button>
+      <div class="settings-row">
+        <span data-i18n="labelLang">Dil</span>
+        <div style="display:flex;gap:6px">
+          <button class="lang-btn" data-lang="tr" onclick="setLang('tr')">TR</button>
+          <button class="lang-btn" data-lang="en" onclick="setLang('en')">EN</button>
+          <button class="lang-btn" data-lang="cat" onclick="setLang('cat')">MEW</button>
+        </div>
+      </div>
+      <button class="start-play-btn secondary back-btn" onclick="showMainMenu()" data-i18n="btnBack">← Geri</button>
     </div>
   </section>
 
   <!-- Hakkımızda -->
   <section id="about-overlay" class="menu-screen hidden">
     <div class="modal" style="text-align:center">
-      <h2>Hakkımızda</h2>
-      <p style="opacity:.6;font-size:9px;line-height:2">Yakında...</p>
-      <button class="start-play-btn secondary back-btn" onclick="showMainMenu()">← Geri</button>
+      <h2 style="font-size:12px;margin-bottom:6px">Cat Blast</h2>
+      <div class="best-badge" style="font-size:8px;display:inline-block;margin-bottom:16px">v0.whoknows</div>
+      <p style="font-size:8px;line-height:2.4;opacity:.75;margin:0 0 16px">
+        <span data-i18n="aboutTagline">Blokları yerleştir, sıraları temizle.</span><br>
+        <span style="font-size:7px;opacity:.8" data-i18n="aboutDesc">Pixel ruhlu bağımlılık yapan bulmaca.</span>
+      </p>
+
+      <hr class="about-divider">
+      <div class="about-section-label" data-i18n="aboutTeamLabel">GELİŞTİRİCİ EKİP</div>
+      <img src="images/Team.png" alt="Ekip" style="width:min(240px,70vw);image-rendering:pixelated;margin-bottom:12px;border-radius:12px" />
+      <div class="about-dev-row">
+        <span>Arda Sarı</span>
+        <button class="about-gh-btn" onclick="window.open('https://github.com/OxyLoop','_system')">⌗ GitHub</button>
+      </div>
+      <div class="about-dev-row">
+        <span>Selen Öznur</span>
+        <button class="about-gh-btn" onclick="window.open('https://github.com/selenoznur','_system')">⌗ GitHub</button>
+      </div>
+      <div class="about-dev-row" style="border-bottom:none">
+        <span>Burak Şanlılar</span>
+        <button class="about-gh-btn" onclick="window.open('https://github.com/buraksanlilar','_system')">⌗ GitHub</button>
+      </div>
+
+      <hr class="about-divider">
+      <div class="about-section-label" data-i18n="aboutContactLabel">İLETİŞİM</div>
+      <button class="about-gh-btn" style="font-size:7px;padding:8px 14px" onclick="window.open('mailto:ardasari4859@gmail.com','_system')">📧 ardasari4859@gmail.com</button>
+
+      <button class="start-play-btn secondary back-btn" style="margin-top:20px" onclick="showMainMenu()" data-i18n="btnBack">← Geri</button>
     </div>
   </section>
 

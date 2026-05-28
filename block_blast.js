@@ -108,6 +108,116 @@ const CAT_DEFS = [
 
 const CAT_IDLE_MS = 8000; // Animasyonlar arası bekleme (ms)
 
+// ── LANGUAGE / i18n ───────────────────────────────────────────────
+const LEVEL_NAMES = {
+  tr:  ['Başlangıç', 'Orta', 'Zor', 'Çok Zor', 'Uzman'],
+  en:  ['Beginner', 'Medium', 'Hard', 'Expert', 'Master'],
+  cat: ['Mew', 'Meow', 'Mrrr', 'Nyaaa', 'PURRRR'],
+};
+const TEXTS = {
+  tr: {
+    btnPlay:'Oyna', btnSettings:'Ayarlar', btnAbout:'Hakkımızda',
+    btnLevelMode:'Level Modu', btnEndless:'♾️ Sonsuz Mod', btnBack:'← Geri',
+    settingsTitle:'Ayarlar', labelSound:'Ses', labelTheme:'Tema', labelLang:'Dil',
+    aboutTitle:'Hakkımızda',
+    aboutTagline:'Blokları yerleştir, sıraları temizle.',
+    aboutDesc:'Pixel ruhlu bağımlılık yapan bulmaca.',
+    aboutTeamLabel:'GELİŞTİRİCİ EKİP', aboutContactLabel:'İLETİŞİM',
+    pauseTitle:'Duraklatıldı', pauseSub:'Seviye {lv} — Skor {sc}',
+    btnResume:'Devam', btnMenu:'Menü',
+    btnNextLevel:'Seviye {n} →', btnFinish:'Bitiş →',
+    luTitle:'Seviye {n} Tamam!',
+    luNext:'Sıradaki: Seviye {n} — {label}', luLast:'Son seviyeyi de geçtin!',
+    gameOverTitle:'Oyun Bitti',
+    btnPlayAgain:'Tekrar Oyna', btnPlayAgainEndless:'♾️ Tekrar Oyna',
+    goEndlessLv:'♾️ Sonsuz',
+    victoryTitle:'🏆 Tebrikler!', victoryMsg:'Tüm seviyeleri geçtin.', btnRestart:'Yeniden Başla',
+    labelScore:'Skor', labelBest:'En İyi', labelLevel:'Seviye',
+    endlessLabel:'♾️ Sonsuz Mod', endlessPoints:'{score} puan',
+    levelLabel:'Seviye {n} — {label}',
+    msgInit:'Başlamak için oyunu başlat.',
+    msgSelectPiece:'Bir blok seç, sonra grid üzerine tıkla',
+    msgPlacePiece:'Bloğu yerleştirmek için grid üzerine tıkla',
+    msgNoPiece:'Önce bir blok seç!', msgNoFit:'Buraya sığmıyor!',
+    msgDebugStart:'Önce oyunu başlat!', msgDebugAdded:"Test bloğu slot 0'a eklendi — yerleştir!",
+    comboGreat:'harika combo! x{n}', combo:'{n}x combo!',
+  },
+  en: {
+    btnPlay:'Play', btnSettings:'Settings', btnAbout:'About',
+    btnLevelMode:'Level Mode', btnEndless:'♾️ Endless', btnBack:'← Back',
+    settingsTitle:'Settings', labelSound:'Sound', labelTheme:'Theme', labelLang:'Language',
+    aboutTitle:'About',
+    aboutTagline:'Place blocks, clear the rows.',
+    aboutDesc:'The pixel-style addictive puzzle.',
+    aboutTeamLabel:'DEVELOPER TEAM', aboutContactLabel:'CONTACT',
+    pauseTitle:'Paused', pauseSub:'Level {lv} — Score {sc}',
+    btnResume:'Resume', btnMenu:'Menu',
+    btnNextLevel:'Level {n} →', btnFinish:'Finish →',
+    luTitle:'Level {n} Done!',
+    luNext:'Next: Level {n} — {label}', luLast:'All levels cleared!',
+    gameOverTitle:'Game Over',
+    btnPlayAgain:'Play Again', btnPlayAgainEndless:'♾️ Play Again',
+    goEndlessLv:'♾️ Endless',
+    victoryTitle:'🏆 Congrats!', victoryMsg:'You beat all levels.', btnRestart:'Restart',
+    labelScore:'Score', labelBest:'Best', labelLevel:'Level',
+    endlessLabel:'♾️ Endless', endlessPoints:'{score} pts',
+    levelLabel:'Level {n} — {label}',
+    msgInit:'Start the game to play.',
+    msgSelectPiece:'Pick a block, then tap the grid',
+    msgPlacePiece:'Tap the grid to place the block',
+    msgNoPiece:'Pick a block first!', msgNoFit:'Does not fit here!',
+    msgDebugStart:'Start the game first!', msgDebugAdded:'Test block added to slot 0 — place it!',
+    comboGreat:'great combo! x{n}', combo:'{n}x combo!',
+  },
+  cat: {
+    btnPlay:'Meow!', btnSettings:'Purrr~', btnAbout:'Mrrrow',
+    btnLevelMode:'Mew Mew', btnEndless:'♾️ Meeeow', btnBack:'← Mew',
+    settingsTitle:'Purrr~', labelSound:'Miyav', labelTheme:'Mrrr', labelLang:'Mew',
+    aboutTitle:'Mrrrow',
+    aboutTagline:'Meow mew mew, purr nyaa!',
+    aboutDesc:'Purrrr miyav meow mrrr.',
+    aboutTeamLabel:'MEOW MEOW MIYAV', aboutContactLabel:'MRRROW',
+    pauseTitle:'Mrrr...', pauseSub:'Nyaa {lv} — Mew {sc}',
+    btnResume:'Purr!', btnMenu:'Mew',
+    btnNextLevel:'Nyaa {n} →', btnFinish:'Meow →',
+    luTitle:'Nyaa {n} Purrrr!',
+    luNext:'Mew: Nyaa {n} — {label}', luLast:'Purrrr meow meow!',
+    gameOverTitle:'Mrrrrow...',
+    btnPlayAgain:'Meow Meow!', btnPlayAgainEndless:'♾️ Meow!',
+    goEndlessLv:'♾️ Meeeow',
+    victoryTitle:'🏆 Nyaaa!!', victoryMsg:'Purr meow mew mrrr!', btnRestart:'Mew Meow!',
+    labelScore:'Mew', labelBest:'Purr', labelLevel:'Nyaa',
+    endlessLabel:'♾️ Meeeow', endlessPoints:'{score} mew',
+    levelLabel:'Nyaa {n} — {label}',
+    msgInit:'Meow... mew mrrr?',
+    msgSelectPiece:'Mew mew, nyaa meow tıkla',
+    msgPlacePiece:'Purrr mew nyaa tıkla',
+    msgNoPiece:'Mew seç önce!', msgNoFit:'Mrrow! Sığmaz!',
+    msgDebugStart:'Meow başlat önce!', msgDebugAdded:"Mew slot 0 meow — nyaa!",
+    comboGreat:'purrrr!! x{n}', combo:'{n}x meow!',
+  },
+};
+let currentLang = 'tr';
+try { currentLang = localStorage.getItem('bb_lang') || 'tr'; } catch(e) {}
+function T(key, vars) {
+  let s = (TEXTS[currentLang] || TEXTS.tr)[key] || key;
+  if (vars) Object.keys(vars).forEach(k => { s = s.replace(new RegExp('\\{' + k + '\\}', 'g'), vars[k]); });
+  return s;
+}
+function getLevelName(n) { return (LEVEL_NAMES[currentLang] || LEVEL_NAMES.tr)[n - 1] || ''; }
+function setLang(lang) {
+  currentLang = lang;
+  try { localStorage.setItem('bb_lang', lang); } catch(e) {}
+  applyLang();
+}
+function applyLang() {
+  document.querySelectorAll('[data-i18n]').forEach(el => { el.textContent = T(el.dataset.i18n); });
+  document.querySelectorAll('.lang-btn').forEach(btn => {
+    btn.classList.toggle('active', btn.dataset.lang === currentLang);
+  });
+  if (gameActive) updateProgress();
+}
+
 // ── STATE ─────────────────────────────────────────────────────────
 let board, obstacles, score, levelScore, bestScore, currentLevel, COLS, ROWS;
 let pieces, selectedPiece, usedFlags;
@@ -131,6 +241,7 @@ catch(e) {}
 // ── INIT (called on page load) ────────────────────────────────────
 function init() {
   applyDark();
+  applyLang();
   syncVolumeSliders();
   if (bestScore > 0) {
     document.getElementById('start-best').style.display = 'inline-block';
@@ -341,8 +452,7 @@ function goNextLevel() {
 function pauseGame() {
   if (!gameActive || paused) return;
   paused = true; playClick();
-  document.getElementById('pause-lv').textContent = currentLevel;
-  document.getElementById('pause-sc').textContent = score;
+  document.getElementById('pause-info').textContent = T('pauseSub', { lv: currentLevel, sc: score });
   showOverlay('pause-overlay');
 }
 
@@ -544,16 +654,16 @@ function selectPiece(i) {
   if (!gameActive || paused || usedFlags[i]) return;
   selectedPiece = i; playSelect();
   document.querySelectorAll('.piece-card').forEach((c, j) => c.classList.toggle('selected', j === i && !usedFlags[j]));
-  setMsg('Bloğu yerleştirmek için grid üzerine tıkla');
+  setMsg(T('msgPlacePiece'));
 }
 
 function placeOnGrid(row, col) {
   if (!gameActive || paused) return;
-  if (selectedPiece === null) { setMsg('Önce bir blok seç!'); return; }
+  if (selectedPiece === null) { setMsg(T('msgNoPiece')); return; }
   if (usedFlags[selectedPiece]) return;
   const p = pieces[selectedPiece];
   const { r, c } = adjustedAnchor(p.shape, row, col);
-  if (!canPlace(p.shape, r, c)) { setMsg('Buraya sığmıyor!'); return; }
+  if (!canPlace(p.shape, r, c)) { setMsg(T('msgNoFit')); return; }
   playPlace();
 
   const placed = [];
@@ -606,7 +716,7 @@ function placeOnGrid(row, col) {
     const allUsed = usedFlags.every(Boolean);
     if (allUsed) setTimeout(() => newPieces(), cleared > 0 ? 420 : 200);
     else if (!anyRemainingCanPlace()) setTimeout(showGameOver, cleared > 0 ? 420 : 200);
-    else setMsg('Bir blok seç, sonra grid üzerine tıkla');
+    else setMsg(T('msgSelectPiece'));
   }, placed.length * 25 + 100);
 }
 
@@ -625,7 +735,7 @@ function showScoreFly(pts, row, col) {
 
 function showCombo(n) {
   const t = document.getElementById('combo-toast');
-  t.textContent = n >= 4 ? 'harika combo! x' + n : n + 'x combo!';
+  t.textContent = n >= 4 ? T('comboGreat', { n }) : T('combo', { n });
   t.className = 'show';
   setTimeout(() => t.className = '', 760);
 }
@@ -646,15 +756,15 @@ function updateProgress() {
     const pct = (score % cycle) / cycle * 100;
     document.getElementById('progress-bar').style.width      = pct + '%';
     document.getElementById('progress-bar').style.background = '#9b7dd4';
-    document.getElementById('prog-left').textContent  = '♾️ Sonsuz Mod';
-    document.getElementById('prog-right').textContent = score + ' puan';
+    document.getElementById('prog-left').textContent  = T('endlessLabel');
+    document.getElementById('prog-right').textContent = T('endlessPoints', { score });
     return;
   }
   const lv  = getLv(currentLevel);
   const pct = Math.min(100, (levelScore / lv.target) * 100);
   document.getElementById('progress-bar').style.width      = pct + '%';
   document.getElementById('progress-bar').style.background = lv.color;
-  document.getElementById('prog-left').textContent  = 'Seviye ' + currentLevel + ' — ' + lv.label;
+  document.getElementById('prog-left').textContent  = T('levelLabel', { n: currentLevel, label: getLevelName(currentLevel) });
   document.getElementById('prog-right').textContent = levelScore + ' / ' + lv.target;
 }
 
@@ -668,13 +778,13 @@ function setMsg(t) {
 function showLevelUp() {
   gameActive = false; playLevelUp();
   const lv = getLv(currentLevel);
-  document.getElementById('lu-title').textContent = 'Seviye ' + currentLevel + ' Tamam!';
+  document.getElementById('lu-title').textContent = T('luTitle', { n: currentLevel });
   document.getElementById('lu-sub').textContent   = currentLevel < LEVELS.length
-    ? 'Sıradaki: Seviye ' + (currentLevel + 1) + ' — ' + getLv(currentLevel + 1).label
-    : 'Son seviyeyi de geçtin!';
+    ? T('luNext', { n: currentLevel + 1, label: getLevelName(currentLevel + 1) })
+    : T('luLast');
   document.getElementById('lu-score').textContent = score;
   document.getElementById('lu-stars').textContent = levelScore >= lv.target * 1.5 ? '⭐⭐⭐' : levelScore >= lv.target * 1.2 ? '⭐⭐' : '⭐';
-  document.getElementById('lu-btn').textContent   = currentLevel < LEVELS.length ? 'Seviye ' + (currentLevel + 1) + ' →' : 'Bitiş →';
+  document.getElementById('lu-btn').textContent   = currentLevel < LEVELS.length ? T('btnNextLevel', { n: currentLevel + 1 }) : T('btnFinish');
   showOverlay('levelup-overlay');
 }
 
@@ -691,10 +801,10 @@ function showGameOver() {
   gameActive = false; playGameOver();
   stopCatTimer();
   pauseBgMusic();
-  document.getElementById('go-lv').textContent   = endlessMode ? '♾️ Sonsuz' : currentLevel;
+  document.getElementById('go-lv').textContent   = endlessMode ? T('goEndlessLv') : currentLevel;
   document.getElementById('go-sc').textContent   = score;
   document.getElementById('go-best').textContent = bestScore;
-  document.getElementById('go-restart-btn').textContent = endlessMode ? '♾️ Tekrar Oyna' : 'Tekrar Oyna';
+  document.getElementById('go-restart-btn').textContent = endlessMode ? T('btnPlayAgainEndless') : T('btnPlayAgain');
   showOverlay('gameover-overlay');
 }
 
@@ -749,7 +859,7 @@ function newPieces() {
   usedFlags = [false, false, false];
   selectedPiece = null;
   renderPieces();
-  setMsg('Bir blok seç, sonra grid üzerine tıkla');
+  setMsg(T('msgSelectPiece'));
   if (!anyRemainingCanPlace()) setTimeout(showGameOver, 400);
 }
 
@@ -907,13 +1017,13 @@ function buildDebugPanel() {
 }
 
 function debugPickShape(i) {
-  if (!gameActive) { setMsg('Önce oyunu başlat!'); return; }
+  if (!gameActive) { setMsg(T('msgDebugStart')); return; }
   pieces[0]    = { shape: SHAPES[i], color: randColor() };
   usedFlags[0] = false;
   selectedPiece = null;
   renderPieces();
   selectPiece(0);
-  setMsg('Test bloğu slot 0\'a eklendi — yerleştir!');
+  setMsg(T('msgDebugAdded'));
 }
 
 // ── DRAG & DROP ───────────────────────────────────────────────────
