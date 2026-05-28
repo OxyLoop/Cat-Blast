@@ -111,6 +111,7 @@ const CAT_IDLE_MS = 8000; // Animasyonlar arası bekleme (ms)
 // ── STATE ─────────────────────────────────────────────────────────
 let board, obstacles, score, levelScore, bestScore, currentLevel, COLS, ROWS;
 let pieces, selectedPiece, usedFlags;
+let _easterClicks = 0, _easterTimer = null;
 let placedGroups = [], cellToGroup = {}; // group hover tracking
 let soundOn = true, paused = false, gameActive = false;
 let endlessMode = false;
@@ -131,7 +132,6 @@ catch(e) {}
 function init() {
   applyDark();
   syncVolumeSliders();
-  buildLevelCards();
   if (bestScore > 0) {
     document.getElementById('start-best').style.display = 'inline-block';
     document.getElementById('start-best-val').textContent = bestScore;
@@ -141,11 +141,18 @@ function init() {
   initDragHandlers();
 }
 
-function buildLevelCards() {
-  const el = document.getElementById('level-cards');
-  LEVELS.forEach(lv => {
-    el.innerHTML += `<div class="lc" style="border-top-color:${lv.color}"><div class="ln">Lv.${lv.n}</div>${lv.label}<br><span style="font-size:10px">${lv.target} puan</span></div>`;
-  });
+function easterEggClick() {
+  _easterClicks++;
+  clearTimeout(_easterTimer);
+  _easterTimer = setTimeout(() => { _easterClicks = 0; }, 2000);
+  if (_easterClicks >= 5) {
+    _easterClicks = 0;
+    clearTimeout(_easterTimer);
+    const wrap = document.getElementById('easter-egg-wrap');
+    wrap.classList.remove('pop');
+    void wrap.offsetWidth;
+    wrap.classList.add('pop');
+  }
 }
 
 // ── HELPERS ───────────────────────────────────────────────────────
@@ -198,7 +205,11 @@ function initBgMusic() {
 function playBgMusic() {
   if (!soundOn) return;
   initBgMusic();
-  bgMusic.play().catch(() => {});
+  bgMusic.play().catch(() => {
+    const retry = () => { bgMusic.play().catch(() => {}); };
+    document.addEventListener('touchstart', retry, { once: true });
+    document.addEventListener('click',      retry, { once: true });
+  });
 }
 
 function pauseBgMusic() {
@@ -224,7 +235,7 @@ function toggleSound() {
   const m = document.getElementById('sound-btn-menu');
   if (m) m.textContent = icon;
   if (soundOn) {
-    if (gameActive && !paused) playBgMusic();
+    if (!paused) playBgMusic();
   } else {
     pauseBgMusic();
   }
@@ -245,9 +256,14 @@ function toggleDark() {
 }
 
 // ── OVERLAYS ──────────────────────────────────────────────────────
-const OVERLAYS = ['start-overlay','pause-overlay','levelup-overlay','gameover-overlay','victory-overlay'];
+const OVERLAYS = ['main-menu-overlay','play-overlay','settings-overlay','about-overlay','pause-overlay','levelup-overlay','gameover-overlay','victory-overlay'];
 function showOverlay(id) { OVERLAYS.forEach(o => document.getElementById(o).classList.toggle('hidden', o !== id)); }
 function hideAll() { OVERLAYS.forEach(o => document.getElementById(o).classList.add('hidden')); }
+
+function showMainMenu()  { playClick(); showOverlay('main-menu-overlay'); }
+function showPlayMenu()  { playClick(); showOverlay('play-overlay'); }
+function showSettings()  { playClick(); showOverlay('settings-overlay'); }
+function showAbout()     { playClick(); showOverlay('about-overlay'); }
 
 // ── GAME FLOW ─────────────────────────────────────────────────────
 function startEndless() {
@@ -256,12 +272,23 @@ function startEndless() {
 }
 
 function restartAfterGameOver() {
-  endlessMode ? startGame(1, true) : startGame(1);
+  playClick(); hideAll();
+  _initLevel(1);
 }
 
 function startGame(lvNum, endless = false) {
   endlessMode = !!endless;
   playClick(); hideAll();
+  const loading = document.getElementById('level-loading');
+  loading.classList.remove('hidden');
+  setTimeout(() => {
+    loading.classList.add('hidden');
+    _initLevel(lvNum);
+  }, 900);
+}
+
+function _initLevel(lvNum) {
+  document.getElementById('game-container').style.display = '';
   currentLevel = lvNum || 1;
   const lv = getLv(currentLevel);
   COLS = lv.grid; ROWS = lv.grid;
@@ -275,7 +302,7 @@ function startGame(lvNum, endless = false) {
   placeObstacles(lv.obstacles);
   clearAllCats();
   stopCatTimer();
-  CAT_DEFS.forEach(def => loadCatSheetByDef(def, () => {})); // preload all sheets
+  CAT_DEFS.forEach(def => loadCatSheetByDef(def, () => {}));
   catAnimTimer = setInterval(() => catSprites.forEach(playCatAnim), CAT_IDLE_MS);
   buildGrid(COLS, ROWS);
   _lastCellSize = cs();
@@ -308,13 +335,12 @@ function goNextLevel() {
   playClick(); hideAll();
   currentLevel++;
   if (currentLevel > LEVELS.length) { showVictory(); return; }
-  startGame(currentLevel);
+  _initLevel(currentLevel);
 }
 
 function pauseGame() {
   if (!gameActive || paused) return;
   paused = true; playClick();
-  pauseBgMusic();
   document.getElementById('pause-lv').textContent = currentLevel;
   document.getElementById('pause-sc').textContent = score;
   showOverlay('pause-overlay');
@@ -324,13 +350,14 @@ function resumeGame() { playClick(); paused = false; hideAll(); playBgMusic(); }
 
 function quitToMenu() {
   playClick(); paused = false; gameActive = false;
-  pauseBgMusic();
+  document.getElementById('game-container').style.display = 'none';
+  playBgMusic();
   stopCatTimer(); clearAllCats();
   if (bestScore > 0) {
     document.getElementById('start-best').style.display = 'inline-block';
     document.getElementById('start-best-val').textContent = bestScore;
   }
-  showOverlay('start-overlay');
+  showOverlay('main-menu-overlay');
 }
 
 document.addEventListener('keydown', e => {
