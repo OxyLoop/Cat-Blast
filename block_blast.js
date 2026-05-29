@@ -102,6 +102,36 @@ const CAT_DEFS = [
     frames: 1, fpr: 1, fps: 10,
     earBodyY: 18,
   },
+  {
+    shape: [[1,1,]],
+    sheet: 'sprites/2x1 Block Cat.png',
+    frames: 1, fpr: 1, fps: 10,
+    earBodyY: 18,
+  },
+  {
+    shape: [[0,1],[1,1]],
+    sheet: 'sprites/2x2 Right Corner Cat.png',
+    frames: 6, fpr: 6, fps: 10,
+    earBodyY: 18,
+  },
+  {
+    shape: [[1,0],[1,1]],
+    sheet: 'sprites/2x2 Left Corner Cat.png',
+    frames: 6, fpr: 6, fps: 10,
+    earBodyY: 18,
+  },
+  {
+    shape: [[1,1],[1,0]],
+    sheet: 'sprites/2x2 Upper Corner Left.png',
+    frames: 6, fpr: 6, fps: 10,
+    earBodyY: 18,
+  },
+  {
+    shape: [[1,1],[0,1]],
+    sheet: 'sprites/2x2 Upper Corner Right.png',
+    frames: 6, fpr: 6, fps: 10,
+    earBodyY: 18,
+  },
   // ── Buraya yeni tanımlar ekle ──────────────────────────────────
   // { shape: [[1,0],[1,1],[1,0]], sheet: 'tShape.png', frames: 4, fpr: 4, fps: 8, earBodyY: 18 },
 ];
@@ -143,12 +173,12 @@ const TEXTS = {
     comboGreat:'harika combo! x{n}', combo:'{n}x combo!',
     pwClawName:'Pençe Darbesi', pwGazeName:'Kedi Bakışı',
     pwSelectCell:'Silmek için dolu bir hücreye tıkla',
-    pwSelectPiece:'Yenilemek için bir blok seç',
+    pwSelectPiece:'Tüm bloklar yenilendi!',
     pwNoCharge:'Şarj yok! Her 300 puanda dolar.',
     pwChargeGained:'⚡ Güç şarjı!',
     pwClawInvalid:'Sadece dolu hücrelere uygulanır!',
     pwClawTip:'Dolu bir hücreyi yok et · her 300 puanda şarj',
-    pwGazeTip:'Bir bloğu yenile · her 300 puanda şarj',
+    pwGazeTip:'Tüm blokları yenile · her 300 puanda şarj',
     pwBombName:'Bomba', pwBombTip:'3×3 alanı temizle · her 300 puanda şarj', pwSelectBomb:'Patlatmak için bir hücreye tıkla',
     labelUndo:'Geri Al', undoTip:'Son yerleştirmeyi geri al', undoNoCharge:'Geri alma hakkı kalmadı!', undoUsed:'↩ Geri alındı!',
     labelHint:'İpucu', hintTip:'Seçili blok için geçerli yerleri göster',
@@ -187,12 +217,12 @@ const TEXTS = {
     comboGreat:'great combo! x{n}', combo:'{n}x combo!',
     pwClawName:'Cat Claw', pwGazeName:'Cat Gaze',
     pwSelectCell:'Click a filled cell to destroy it',
-    pwSelectPiece:'Pick a block to refresh',
+    pwSelectPiece:'All blocks refreshed!',
     pwNoCharge:'No charge! Earn 300 pts to charge.',
     pwChargeGained:'⚡ Power charged!',
     pwClawInvalid:'Only filled cells can be clawed!',
     pwClawTip:'Destroy a filled cell · charges every 300 pts',
-    pwGazeTip:'Refresh a block · charges every 300 pts',
+    pwGazeTip:'Refresh all blocks · charges every 300 pts',
     pwBombName:'Bomb', pwBombTip:'Clear 3×3 area · charges every 300 pts', pwSelectBomb:'Click a cell to blast',
     labelUndo:'Undo', undoTip:'Undo last placement', undoNoCharge:'No undo charges left!', undoUsed:'↩ Undone!',
     labelHint:'Hint', hintTip:'Show valid placements for selected block',
@@ -231,12 +261,12 @@ const TEXTS = {
     comboGreat:'purrrr!! x{n}', combo:'{n}x meow!',
     pwClawName:'PENÇE!', pwGazeName:'Miyav!',
     pwSelectCell:'Mew! Pençe hücre nyaa~',
-    pwSelectPiece:'Mew seç miyav!',
+    pwSelectPiece:'Mew mew purrrr!',
     pwNoCharge:'Mrr.. şarj yok! 300 mew!',
     pwChargeGained:'⚡ Purrrr!',
     pwClawInvalid:'Mrrow! Dolu mew lazım!',
     pwClawTip:'Mew nyaa pençe! · 300 mew = şarj',
-    pwGazeTip:'Purr mew değiştir · 300 mew = şarj',
+    pwGazeTip:'Tüm mew yenile · 300 mew = şarj',
     pwBombName:'PATLAT!', pwBombTip:'3×3 BOOM meow · 300 mew', pwSelectBomb:'Mew BOOM tıkla~',
     labelUndo:'Geri Mew', undoTip:'Mew geri al purr!', undoNoCharge:'Mrr geri yok!', undoUsed:'↩ Meeow!',
     labelHint:'İpucu', hintTip:'Mew purr göster nyaa',
@@ -757,7 +787,10 @@ function applyGroupHover(idx, on) {
   const gSet = placedGroups[gIdx];
   if (!gSet) return;
   catSprites.forEach(s => {
-    if (gSet.has(s.r * COLS + s.c)) playCatAnim(s);
+    const hits = s.def.shape.some((row, dr) =>
+      row.some((v, dc) => v && gSet.has((s.r + dr) * COLS + (s.c + dc)))
+    );
+    if (hits) playCatAnim(s);
   });
 }
 
@@ -1376,22 +1409,25 @@ function applyClaw(row, col) {
   }, 420);
 }
 
-// Kedi Bakışı — seçilen bloğu yenile
+// Kedi Bakışı — tüm blokları yenile
 function activateGaze() {
   if (!gameActive || paused) return;
-  if (gazeActive) { cancelGaze(); return; }
   if (gazeCharges <= 0) { setMsg(T('pwNoCharge')); return; }
-  cancelClaw();
-  gazeActive = true;
+  cancelClaw(); cancelBomb();
+  gazeCharges--;
   selectedPiece = null;
   document.querySelectorAll('.piece-card').forEach(c => c.classList.remove('selected'));
   clearPreview();
   for (let i = 0; i < 3; i++) {
-    if (!usedFlags[i]) document.getElementById('p' + i).classList.add('gaze-available');
+    if (!usedFlags[i]) {
+      pieces[i] = newPiece();
+      renderPieceCard(i);
+    }
   }
-  setMsg(T('pwSelectPiece'));
   updatePowerupUI();
-  playClick();
+  playPowerupUse(); haptic([10, 5, 35]);
+  setMsg(T('msgSelectPiece'));
+  if (!anyRemainingCanPlace()) setTimeout(showGameOver, 400);
 }
 
 function cancelGaze() {
@@ -1745,7 +1781,6 @@ let dragState = null; // { idx, shape, ghostEl, isTouch }
 
 function startDrag(idx, clientX, clientY, isTouch) {
   if (!gameActive || paused || usedFlags[idx]) return;
-  if (gazeActive) { applyGaze(idx); return; }
   if (clawActive) cancelClaw();
   if (bombActive) cancelBomb();
   if (dragState) cancelDrag();
