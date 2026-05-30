@@ -132,11 +132,17 @@ const CAT_DEFS = [
     frames: 6, fpr: 6, fps: 10,
     earBodyY: 18,
   },
+  {
+    shape: [[1,1,1,1]],
+    sheet: 'sprites/4x1 Block Cat.png',
+    frames: 6, fpr: 6, fps: 10,
+    earBodyY: 18,
+  },
   // ── Buraya yeni tanımlar ekle ──────────────────────────────────
   // { shape: [[1,0],[1,1],[1,0]], sheet: 'tShape.png', frames: 4, fpr: 4, fps: 8, earBodyY: 18 },
 ];
 
-const CAT_IDLE_MS = 8000; // Animasyonlar arası bekleme (ms)
+const CAT_IDLE_MS = 2000; // Animasyonlar arası bekleme (ms)
 
 // ── LANGUAGE / i18n ───────────────────────────────────────────────
 const LEVEL_NAMES = {
@@ -682,7 +688,15 @@ function _initLevel(lvNum) {
   clearAllCats();
   stopCatTimer();
   CAT_DEFS.forEach(def => loadCatSheetByDef(def, () => {}));
-  catAnimTimer = setInterval(() => catSprites.forEach(playCatAnim), CAT_IDLE_MS);
+  catAnimTimer = setInterval(() => {
+    if (!catSprites.length) return;
+    const pool = [...catSprites];
+    for (let i = pool.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [pool[i], pool[j]] = [pool[j], pool[i]];
+    }
+    pool.slice(0, 2).forEach(playCatAnim);
+  }, CAT_IDLE_MS);
   document.getElementById('powerup-bar').classList.remove('hidden');
   const timerCardEl = document.getElementById('timer-card');
   if (timerCardEl) timerCardEl.style.display = timerMode ? '' : 'none';
@@ -1749,18 +1763,41 @@ function buildDebugPanel() {
     const card = document.createElement('div');
     card.className = 'debug-card';
     card.title = 'Şekil ' + (i + 1);
-    const cols  = Math.max(...shape.map(r => r.length));
-    const inner = document.createElement('div');
-    inner.style.cssText = `display:grid;grid-template-columns:repeat(${cols},14px);gap:2px;`;
-    shape.forEach(row => {
-      for (let x = 0; x < cols; x++) {
-        const cell = document.createElement('div');
-        const filled = row[x];
-        cell.style.cssText = `width:14px;height:14px;border-radius:3px;background:${filled ? '#5d8ed8' : 'transparent'};${filled ? 'box-shadow:inset 0 -2px 0 rgba(0,0,0,.15);' : ''}`;
-        inner.appendChild(cell);
-      }
-    });
-    card.appendChild(inner);
+    const catDef = findCatDef(shape);
+    if (catDef) {
+      const cSz = 14, gap = 2;
+      const bW = catDef.shape[0].length * cSz + (catDef.shape[0].length - 1) * gap;
+      const bH = catDef.shape.length    * cSz + (catDef.shape.length    - 1) * gap;
+      const wrap = document.createElement('div');
+      wrap.style.cssText = `position:relative;width:${bW}px;height:${bH}px;`;
+      loadCatSheetByDef(catDef, (frameW, frameH) => {
+        const rawScale = bH / (frameH - catDef.earBodyY);
+        const earPx = Math.round(catDef.earBodyY * rawScale);
+        const sFW   = Math.round(frameW * rawScale);
+        const sFH   = bH + earPx;
+        const sRows = Math.ceil(catDef.frames / catDef.fpr);
+        const el = document.createElement('div');
+        el.style.cssText = `position:absolute;left:0;top:${-earPx}px;width:${sFW}px;height:${sFH}px;`
+          + `background-image:url('${catDef.sheet}');`
+          + `background-size:${catDef.fpr * sFW}px ${sRows * sFH}px;`
+          + `background-position:0 0;background-repeat:no-repeat;pointer-events:none;`;
+        wrap.appendChild(el);
+      });
+      card.appendChild(wrap);
+    } else {
+      const cols  = Math.max(...shape.map(r => r.length));
+      const inner = document.createElement('div');
+      inner.style.cssText = `display:grid;grid-template-columns:repeat(${cols},14px);gap:2px;`;
+      shape.forEach(row => {
+        for (let x = 0; x < cols; x++) {
+          const cell = document.createElement('div');
+          const filled = row[x];
+          cell.style.cssText = `width:14px;height:14px;border-radius:3px;background:${filled ? '#5d8ed8' : 'transparent'};${filled ? 'box-shadow:inset 0 -2px 0 rgba(0,0,0,.15);' : ''}`;
+          inner.appendChild(cell);
+        }
+      });
+      card.appendChild(inner);
+    }
     card.addEventListener('click', () => debugPickShape(i));
     container.appendChild(card);
   });
